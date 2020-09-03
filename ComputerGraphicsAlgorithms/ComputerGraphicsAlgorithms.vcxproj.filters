@@ -1,0 +1,91 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Исходные файлы">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Файлы заголовков">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hh;hpp;hxx;hm;inl;inc;ipp;xsd</Extensions>
+    </Filter>
+    <Filter Include="Файлы ресурсов">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="Исходные файлы\Tools">
+      <UniqueIdentifier>{8a402645-0d53-40d4-b885-d9489ef3efbe}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Файлы заголовков\Tools">
+      <UniqueIdentifier>{dfc244d4-21c0-4e56-8124-d71edd683ce4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Файлы заголовков\Models">
+      <UniqueIdentifier>{6b09092d-c55b-4925-977d-9ecfee31649c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Файлы заголовков\Math">
+      <UniqueIdentifier>{a18400f7-d33a-49c4-9d64-6ff9ea786533}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Исходные файлы\Math">
+      <UniqueIdentifier>{ea8bef3d-b7f8-4a43-8dc1-0b4392fa56fd}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Исходные файлы\Models">
+      <UniqueIdentifier>{caf8dac1-7c53-419d-a29c-e8fb64598550}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="framework.h">
+      <Filter>Файлы заголовков</Filter>
+    </ClInclude>
+    <ClInclude Include="targetver.h">
+      <Filter>Файлы заголовков</Filter>
+    </ClInclude>
+    <ClInclude Include="Resource.h">
+      <Filter>Файлы заголовков</Filter>
+    </ClInclude>
+    <ClInclude Include="main.h">
+      <Filter>Файлы заголовков</Filter>
+    </ClInclude>
+    <ClInclude Include="ObjParser.h">
+      <Filter>Файлы заголовков\Tools</Filter>
+    </ClInclude>
+    <ClInclude Include="Obj.h">
+      <Filter>Файлы заголовков\Models</Filter>
+    </ClInclude>
+    <ClInclude Include="Math.h">
+      <Filter>Файлы заголовков\Math</Filter>
+    </ClInclude>
+    <ClInclude Include="Camera.h">
+      <Filter>Файлы заголовков\Models</Filter>
+    </ClInclude>
+    <ClInclude Include="Game.h">
+      <Filter>Файлы заголовков\Models</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="main.cpp">
+      <Filter>Исходные файлы</Filter>
+    </ClCompile>
+    <ClCompile Include="ObjParser.cpp">
+      <Filter>Исходные файлы\Tools</Filter>
+    </ClCompile>
+    <ClCompile Include="Camera.cpp">
+      <Filter>Исходные файлы\Models</Filter>
+    </ClCompile>
+    <ClCompile Include="Game.cpp">
+      <Filter>Исходные файлы\Models</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="ComputerGraphicsAlgorithms.rc">
+      <Filter>Файлы ресурсов</Filter>
+    </ResourceCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="small.ico">
+      <Filter>Файлы ресурсов</Filter>
+    </Image>
+    <Image Include="ComputerGraphicsAlgorithms.ico">
+      <Filter>Файлы ресурсов</Filter>
+    </Image>
+  </ItemGroup>
+</Project>
