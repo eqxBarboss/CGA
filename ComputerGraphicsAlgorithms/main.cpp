@@ -5,14 +5,16 @@
 #include <algorithm>
 #include <cstdlib>
 #include <cmath>
+#include <functional>
 
 #include "framework.h"
 #include "main.h"
 
 #include "Game.h"
-#include "Obj.h"
 
 #define MAX_LOADSTRING 100
+#define WIDTH 1920
+#define HEIGHT 1080
 
 // Глобальные переменные:
 HINSTANCE hInst;                                // текущий экземпляр
@@ -24,7 +26,7 @@ HDC memoryDC;
 BITMAP bitmap;
 HBITMAP hBitmap;
 
-void DrawScene();
+void OnCreate(HWND hWnd);
 
 std::unique_ptr<cga::Game> game;
 
@@ -39,8 +41,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
                      _In_ LPWSTR    lpCmdLine,
                      _In_ int       nCmdShow)
 {
-	game = std::make_unique<cga::Game>(GetTickCount64, DrawScene);
-
     UNREFERENCED_PARAMETER(hPrevInstance);
     UNREFERENCED_PARAMETER(lpCmdLine);
 
@@ -117,7 +117,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
    hInst = hInstance; // Сохранить маркер экземпляра в глобальной переменной
 
    hWnd = CreateWindowW(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW ^ WS_THICKFRAME ^ WS_MAXIMIZEBOX,
-      CW_USEDEFAULT, 0, game->width, game->height, nullptr, nullptr, hInstance, nullptr);
+      CW_USEDEFAULT, 0, WIDTH, HEIGHT, nullptr, nullptr, hInstance, nullptr);
 
    if (!hWnd)
    {
@@ -146,20 +146,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     {
 	case WM_CREATE:
 		{
-			hdc = GetDC(hWnd);
-			hBitmap = CreateCompatibleBitmap(hdc, game->width, game->height);
-			memoryDC = CreateCompatibleDC(hdc);
-			ReleaseDC(hWnd, hdc);
-			SelectObject(memoryDC, hBitmap);
-			DeleteObject(hBitmap);
-
-			auto brush = CreateSolidBrush(RGB(255, 255, 255));
-			auto prev = SelectObject(memoryDC, brush);
-			Rectangle(memoryDC, 0, 0, game->width, game->height);
-			SelectObject(memoryDC, prev);
-			DeleteObject(brush);
-
-            game->SetDeviceContext(memoryDC);
+            OnCreate(hWnd);
 		}
 		break;
     case WM_COMMAND:
@@ -189,7 +176,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 					if (GetOpenFileName(&ofn) == TRUE)
 					{
 						auto fileName = std::string(ofn.lpstrFile);
-						game->ReloadScene(fileName);
+						game->LoadScene(fileName);
 					}
 				}
 				break;
@@ -214,7 +201,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		{
 			auto xPos = GET_X_LPARAM(lParam);
 			auto yPos = GET_Y_LPARAM(lParam);
-			//game->OnMouseMove(xPos, yPos);
+			game->OnMouseMove(xPos, yPos);
 		}
 		break;
 	case WM_MOUSEWHEEL:
@@ -227,7 +214,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         {
             PAINTSTRUCT ps;
 			hdc = BeginPaint(hWnd, &ps);
-			BitBlt(hdc, 0, 0, game->width, game->height, memoryDC, 0, 0, SRCCOPY);
+			BitBlt(hdc, 0, 0, WIDTH, HEIGHT, memoryDC, 0, 0, SRCCOPY);
 			EndPaint(hWnd, &ps);
         }
         break;
@@ -260,7 +247,25 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
     return (INT_PTR)FALSE;
 }
 
-void DrawScene()
+void OnInvalidated()
 {
 	InvalidateRect(hWnd, NULL, false);
+}
+
+void OnCreate(HWND hWnd)
+{
+    hdc = GetDC(hWnd);
+    hBitmap = CreateCompatibleBitmap(hdc, WIDTH, HEIGHT);
+    memoryDC = CreateCompatibleDC(hdc);
+    ReleaseDC(hWnd, hdc);
+    SelectObject(memoryDC, hBitmap);
+    DeleteObject(hBitmap);
+    
+    auto brush = CreateSolidBrush(RGB(255, 255, 255));
+    auto prev = SelectObject(memoryDC, brush);
+    Rectangle(memoryDC, 0, 0, WIDTH, HEIGHT);
+    SelectObject(memoryDC, prev);
+    DeleteObject(brush);
+
+    game = std::make_unique<cga::Game>(GetTickCount64, OnInvalidated, memoryDC, WIDTH, HEIGHT);
 }

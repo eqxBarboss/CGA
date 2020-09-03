@@ -73,22 +73,18 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
     <IncludePath>C:\Users\eqxba\Desktop\АКГ\ComputerGraphicsAlgorithms\ComputerGraphicsAlgorithms\External dependencies\Include;$(IncludePath)</IncludePath>
-    <LibraryPath>C:\Users\eqxba\Desktop\АКГ\ComputerGraphicsAlgorithms\ComputerGraphicsAlgorithms\External dependencies\Libs;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
     <IncludePath>C:\Users\eqxba\Desktop\АКГ\ComputerGraphicsAlgorithms\ComputerGraphicsAlgorithms\External dependencies\Include;$(IncludePath)</IncludePath>
-    <LibraryPath>C:\Users\eqxba\Desktop\АКГ\ComputerGraphicsAlgorithms\ComputerGraphicsAlgorithms\External dependencies\Libs;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
     <IncludePath>C:\Users\eqxba\Desktop\АКГ\ComputerGraphicsAlgorithms\ComputerGraphicsAlgorithms\External dependencies\Include;$(IncludePath)</IncludePath>
-    <LibraryPath>C:\Users\eqxba\Desktop\АКГ\ComputerGraphicsAlgorithms\ComputerGraphicsAlgorithms\External dependencies\Libs;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>C:\Users\DAY\Desktop\АКГ\CGA\ComputerGraphicsAlgorithms\External dependencies\Include;$(IncludePath)</IncludePath>
-    <LibraryPath>$(LibraryPath)</LibraryPath>
+    <IncludePath>C:\Users\eqxba\Desktop\АКГ\ComputerGraphicsAlgorithms\ComputerGraphicsAlgorithms\External dependencies\Include;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -174,7 +170,9 @@
     <ClInclude Include="framework.h" />
     <ClInclude Include="Obj.h" />
     <ClInclude Include="ObjParser.h" />
+    <ClInclude Include="Renderer.h" />
     <ClInclude Include="Resource.h" />
+    <ClInclude Include="Scene.h" />
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
@@ -182,6 +180,8 @@
     <ClCompile Include="Game.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="ObjParser.cpp" />
+    <ClCompile Include="Renderer.cpp" />
+    <ClCompile Include="Scene.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="ComputerGraphicsAlgorithms.rc" />

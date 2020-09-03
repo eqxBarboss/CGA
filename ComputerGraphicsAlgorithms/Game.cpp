@@ -2,25 +2,27 @@
 
 #include "ObjParser.h"
 #include "Math.h"
+#include "Camera.h"
 
 namespace cga
 {
 
-Game::Game(GetTickCountCallback aGetTickCountCallback, Callback aInvalidateCallback)
+Game::Game(std::function<int()> aGetTickCountCallback, std::function<void()> aInvalidateCallback, HDC aDeviceContext, int aWidth, int aHeight)
 	: getTickCountCallback(aGetTickCountCallback),
-	invalidatedCallback(aInvalidateCallback),
-	camera(glm::vec3(0.0f, 0.0f, 2.5f))
+	renderer(aWidth, aHeight, aDeviceContext, aInvalidateCallback),
+	width(aWidth),
+	height(aHeight),
+	lastX((float)width / 2),
+	lastY((float)height / 2),
+	keyStates(1024, false)
 {
 	lastTick = getTickCountCallback();
 }
 
-void Game::SetDeviceContext(HDC aDeviceContext) 
-{
-	deviceContext = aDeviceContext;
-}
-
 void Game::GameCycle()
 {
+	if (scene == nullptr) return;
+
 	auto currentTick = getTickCountCallback();
 	deltaTime = currentTick - lastTick;
 	lastTick = currentTick;
@@ -28,82 +30,57 @@ void Game::GameCycle()
 	DoMovement();
 }
 
+void Game::OnUpdated()
+{
+	renderer.Render(scene);
+}
+
 void Game::DoMovement()
 {
+	if (scene == nullptr) return;
+
+	Camera &camera = scene->camera;
 	bool updated = false;
 
-	if (w)
+	if (keyStates[0x57])
 	{
 		camera.ProcessKeyboard(FORWARD, deltaTime);
 		updated = true;
 	}
-	if (s)
+	if (keyStates[0x53])
 	{
 		camera.ProcessKeyboard(BACKWARD, deltaTime);
 		updated = true;
 	}
-	if (a)
+	if (keyStates[0x41])
 	{
 		camera.ProcessKeyboard(LEFT, deltaTime);
 		updated = true;
 	}
-	if (d)
+	if (keyStates[0x44])
 	{
 		camera.ProcessKeyboard(RIGHT, deltaTime);
-		updated = true;
-	}	
-	if (up)
-	{
-		vertAngle -= AngleStep * deltaTime;
-		updated = true;
-	}
-	if (down)
-	{
-		vertAngle += AngleStep * deltaTime;
-		updated = true;
-
-	}
-	if (left)
-	{
-		horAngle += AngleStep * deltaTime;
-		updated = true;
-	}
-	if (right)
-	{
-		horAngle -= AngleStep * deltaTime;
 		updated = true;
 	}
 
 	if (updated)
-		UpdateScene();
+		OnUpdated();
 }
 
 void Game::OnKeyDown(unsigned int virtualKeyCode)
 {
-	if (virtualKeyCode == 0x57) w = true;
-	if (virtualKeyCode == 0x41) a = true;
-	if (virtualKeyCode == 0x53) s = true;
-	if (virtualKeyCode == 0x44) d = true;
-	if (virtualKeyCode == 0x26) up = true;
-	if (virtualKeyCode == 0x28) down = true;
-	if (virtualKeyCode == 0x25) left = true;
-	if (virtualKeyCode == 0x27) right = true;
+	keyStates[virtualKeyCode] = true;
 }
 
 void Game::OnKeyUp(unsigned int virtualKeyCode)
 {
-	if (virtualKeyCode == 0x57) w = false;
-	if (virtualKeyCode == 0x41) a = false;
-	if (virtualKeyCode == 0x53) s = false;
-	if (virtualKeyCode == 0x44) d = false;
-	if (virtualKeyCode == 0x26) up = false;
-	if (virtualKeyCode == 0x28) down = false;
-	if (virtualKeyCode == 0x25) left = false;
-	if (virtualKeyCode == 0x27) right = false;
+	keyStates[virtualKeyCode] = false;
 }
 
 void Game::OnMouseMove(int newX, int newY)
 {
+	if (scene == nullptr) return;
+
 	if (firstMouse)
 	{
 		lastX = newX;
@@ -120,114 +97,31 @@ void Game::OnMouseMove(int newX, int newY)
 	lastX = newX;
 	lastY = newY;
 
-	camera.ProcessMouseMovement(xoffset, yoffset);
-	UpdateScene();
+	scene->camera.ProcessMouseMovement(xoffset, yoffset);
+	OnUpdated();
 }
 
 void Game::OnWheelScroll(int delta)
 {
+	if (scene == nullptr) return;
+
 	if (delta == 0)
 		return;
 
-	camera.ProcessMouseScroll(delta);
-	UpdateScene();
+	scene->camera.ProcessMouseScroll(delta);
+	OnUpdated();
 }
 
-void Game::UpdateScene()
-{
-	auto model = glm::mat4(1.0f);
-	model = model * GetRotationAroundYMatrix(glm::radians(horAngle));
-	model = model * GetRotationAroundXMatrix(glm::radians(vertAngle));
-
-	const auto view = camera.GetViewMatrix();
-	const auto projection = GetPerspectiveProjectionMatrix(width, height, 0.1f, 1000.0f, camera.FOV);
-	//const auto projection = GetOrthographicProjectionMatrix(10, 10, 0.1f, 1000.0f);
-	const auto viewPort = GetViewPortMatrix(width, height);
-
-	const auto pvm = projection * view * model;
-
-	for (int i = 0; i < initialObj.vertices.size(); i++)
-	{
-		obj.vertices[i] = pvm * initialObj.vertices[i];
-		//obj.vertices[i] = model * initialObj.vertices[i];
-		//obj.vertices[i] = view * obj.vertices[i];
-		//obj.vertices[i] = projection * obj.vertices[i];
-
-		obj.vertices[i].x = obj.vertices[i].x / obj.vertices[i].w;
-		obj.vertices[i].y = obj.vertices[i].y / obj.vertices[i].w;
-		obj.vertices[i].z = obj.vertices[i].z / obj.vertices[i].w;
-		obj.vertices[i].w = 1.0f;
-
-		//if (obj.vertices[i].x > 1 || obj.vertices[i].x < -1 || obj.vertices[i].y > 1 || obj.vertices[i].y < -1 ||
-		//	obj.vertices[i].z > 1 || obj.vertices[i].z < -1)
-		//{
-		//	obj.vertices[i] = glm::vec4(0, 0, 0, 0);
-		//	continue;
-		//}
-
-		obj.vertices[i] = viewPort * obj.vertices[i];
-	}
-
-	Render();
-
-	invalidatedCallback();
-}
-
-void Game::ReloadScene(std::string pathToObject)
+void Game::LoadScene(std::string pathToObject)
 {
 	ObjParser parser;
 	auto loadedObj = parser.Parse(pathToObject);
 	if (loadedObj)
 	{
-		initialObj = loadedObj.value();
-		obj = initialObj;
+		scene = std::make_unique<Scene>(Camera(glm::vec3(0.0f, 0.0f, 2.5f)), loadedObj.value());
 	}
 
-	UpdateScene();
-}
-
-inline void RasterizeLine(HDC dc, glm::vec4 a, glm::vec4 b)
-{
-	MoveToEx(dc, a.x, a.y, NULL);
-	LineTo(dc, b.x, b.y);
-
-	//auto dx = b.x - a.x;
-	//auto dy = b.y - a.y;
-
-	//auto steps = abs(dx) > abs(dy) ? abs(dx) : abs(dy);
-
-	//auto Xinc = dx / (float)steps;
-	//auto Yinc = dy / (float)steps;
-
-	//auto X = a.x;
-	//auto Y = a.y;
-
-	//for (int i = 0; i <= steps; i++)
-	//{
-	//	SetPixel(dc, X, Y, RGB(0, 0, 0));
-	//	X += Xinc;
-	//	Y += Yinc;
-	//}
-}
-
-void Game::Render()
-{
-	SelectObject(deviceContext, GetStockObject(WHITE_BRUSH));
-	Rectangle(deviceContext, 0, 0, width, height);
-
-	for (const auto& polygon : obj.polygons)
-	{
-		//MoveToEx(memoryDC, game->obj.vertices[polygon.verticesIndices[0] - 1].x, game->obj.vertices[polygon.verticesIndices[0] - 1].y, nullptr);
-
-		for (int i = 0; i < polygon.verticesIndices.size() - 1; i++)
-		{
-			RasterizeLine(deviceContext, obj.vertices[polygon.verticesIndices[i] - 1], obj.vertices[polygon.verticesIndices[i + 1] - 1]);
-		}
-
-		RasterizeLine(deviceContext, obj.vertices[polygon.verticesIndices[polygon.verticesIndices.size() - 1] - 1], obj.vertices[polygon.verticesIndices[0] - 1]);
-
-		//LineTo(memoryDC, game->obj.vertices[polygon.verticesIndices[0] - 1].x, game->obj.vertices[polygon.verticesIndices[0] - 1].y);
-	}
+	OnUpdated();
 }
 
 }

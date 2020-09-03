@@ -1,30 +1,24 @@
 #pragma once
 
 #include <string>
+#include <vector>
+#include <memory>
+#include <functional>
 
-#include "Camera.h"
-#include "Obj.h"
 #include "framework.h"
+
+#include "Scene.h"
+#include "Renderer.h"
 
 namespace cga
 {
 
 const int AngleStep = 1;
 
-typedef unsigned long long (*GetTickCountCallback)();
-typedef void (*Callback)();
-
 class Game
 {
 public:
-	const int height = 1080;
-	const int width = 1920;
-
-	Obj initialObj, obj;
-
-	Game(GetTickCountCallback aGetTickCountCallback, Callback aInvalidateCallback);
-
-	void SetDeviceContext(HDC aDeviceContext);
+	Game(std::function<int()> aGetTickCountCallback, std::function<void()> aInvalidateCallback, HDC aDeviceContext, int aWidth, int aHeight);
 
 	// event processors
 	void OnKeyDown(unsigned int virtualKeyCode);
@@ -32,32 +26,28 @@ public:
 	void OnMouseMove(int newX, int newY);
 	void OnWheelScroll(int delta);
 
-	void ReloadScene(std::string pathToObject);
+	void LoadScene(std::string pathToObject);
 
 	void GameCycle();
 
-protected:
-	Camera camera;
+private:
+	std::unique_ptr<Scene> scene;
+	Renderer renderer;
+
 	unsigned long long lastTick, deltaTime = 0;
 
-	bool w = false, a = false, s = false, d = false, right = false, left = false, up = false, down = false;
+	std::vector<bool> keyStates;
 
-	float horAngle = 0, vertAngle = 0;
-
-	int lastX = width / 2, lastY = height / 2;
+	int width, height;
+	int lastX, lastY;
 	bool firstMouse = true;
 
-	HDC deviceContext;
-
 	// callbacks
-	GetTickCountCallback getTickCountCallback;
-	Callback invalidatedCallback;
+	std::function<int()> getTickCountCallback;
 
 	void DoMovement();
 
-	void UpdateScene();
-
-	void Render();
+	void OnUpdated();
 };
 
 }
