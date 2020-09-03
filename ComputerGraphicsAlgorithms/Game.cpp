@@ -14,6 +14,11 @@ Game::Game(GetTickCountCallback aGetTickCountCallback, Callback aInvalidateCallb
 	lastTick = getTickCountCallback();
 }
 
+void Game::SetDeviceContext(HDC aDeviceContext) 
+{
+	deviceContext = aDeviceContext;
+}
+
 void Game::GameCycle()
 {
 	auto currentTick = getTickCountCallback();
@@ -163,6 +168,8 @@ void Game::UpdateScene()
 		obj.vertices[i] = viewPort * obj.vertices[i];
 	}
 
+	Render();
+
 	invalidatedCallback();
 }
 
@@ -177,6 +184,50 @@ void Game::ReloadScene(std::string pathToObject)
 	}
 
 	UpdateScene();
+}
+
+inline void RasterizeLine(HDC dc, glm::vec4 a, glm::vec4 b)
+{
+	MoveToEx(dc, a.x, a.y, NULL);
+	LineTo(dc, b.x, b.y);
+
+	//auto dx = b.x - a.x;
+	//auto dy = b.y - a.y;
+
+	//auto steps = abs(dx) > abs(dy) ? abs(dx) : abs(dy);
+
+	//auto Xinc = dx / (float)steps;
+	//auto Yinc = dy / (float)steps;
+
+	//auto X = a.x;
+	//auto Y = a.y;
+
+	//for (int i = 0; i <= steps; i++)
+	//{
+	//	SetPixel(dc, X, Y, RGB(0, 0, 0));
+	//	X += Xinc;
+	//	Y += Yinc;
+	//}
+}
+
+void Game::Render()
+{
+	SelectObject(deviceContext, GetStockObject(WHITE_BRUSH));
+	Rectangle(deviceContext, 0, 0, width, height);
+
+	for (const auto& polygon : obj.polygons)
+	{
+		//MoveToEx(memoryDC, game->obj.vertices[polygon.verticesIndices[0] - 1].x, game->obj.vertices[polygon.verticesIndices[0] - 1].y, nullptr);
+
+		for (int i = 0; i < polygon.verticesIndices.size() - 1; i++)
+		{
+			RasterizeLine(deviceContext, obj.vertices[polygon.verticesIndices[i] - 1], obj.vertices[polygon.verticesIndices[i + 1] - 1]);
+		}
+
+		RasterizeLine(deviceContext, obj.vertices[polygon.verticesIndices[polygon.verticesIndices.size() - 1] - 1], obj.vertices[polygon.verticesIndices[0] - 1]);
+
+		//LineTo(memoryDC, game->obj.vertices[polygon.verticesIndices[0] - 1].x, game->obj.vertices[polygon.verticesIndices[0] - 1].y);
+	}
 }
 
 }

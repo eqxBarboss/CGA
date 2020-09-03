@@ -87,8 +87,8 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>C:\Users\eqxba\Desktop\АКГ\ComputerGraphicsAlgorithms\ComputerGraphicsAlgorithms\External dependencies\Include;$(IncludePath)</IncludePath>
-    <LibraryPath>C:\Users\eqxba\Desktop\АКГ\ComputerGraphicsAlgorithms\ComputerGraphicsAlgorithms\External dependencies\Libs;$(LibraryPath)</LibraryPath>
+    <IncludePath>C:\Users\DAY\Desktop\АКГ\CGA\ComputerGraphicsAlgorithms\External dependencies\Include;$(IncludePath)</IncludePath>
+    <LibraryPath>$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>

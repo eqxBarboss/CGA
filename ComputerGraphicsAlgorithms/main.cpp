@@ -158,6 +158,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			Rectangle(memoryDC, 0, 0, game->width, game->height);
 			SelectObject(memoryDC, prev);
 			DeleteObject(brush);
+
+            game->SetDeviceContext(memoryDC);
 		}
 		break;
     case WM_COMMAND:
@@ -258,48 +260,7 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
     return (INT_PTR)FALSE;
 }
 
-inline void RasterizeLine(HDC dc, glm::vec4 a, glm::vec4 b)
-{
-	MoveToEx(dc, a.x, a.y, NULL);
-	LineTo(dc, b.x, b.y);
-
-	//auto dx = b.x - a.x;
-	//auto dy = b.y - a.y;
-
-	//auto steps = abs(dx) > abs(dy) ? abs(dx) : abs(dy);
-
-	//auto Xinc = dx / (float)steps;
-	//auto Yinc = dy / (float)steps;
-
-	//auto X = a.x;
-	//auto Y = a.y;
-
-	//for (int i = 0; i <= steps; i++)
-	//{
-	//	SetPixel(dc, X, Y, RGB(0, 0, 0));
-	//	X += Xinc;
-	//	Y += Yinc;
-	//}
-}
-
 void DrawScene()
 {
-	SelectObject(memoryDC, GetStockObject(WHITE_BRUSH));
-	Rectangle(memoryDC, 0, 0, game->width, game->height);
-
-	for (const auto& polygon : game->obj.polygons)
-	{
-		//MoveToEx(memoryDC, game->obj.vertices[polygon.verticesIndices[0] - 1].x, game->obj.vertices[polygon.verticesIndices[0] - 1].y, nullptr);
-
-		for (int i = 0; i < polygon.verticesIndices.size() - 1; i++)
-		{
-			RasterizeLine(memoryDC, game->obj.vertices[polygon.verticesIndices[i] - 1], game->obj.vertices[polygon.verticesIndices[i + 1] - 1]);
-		}
-
-		RasterizeLine(memoryDC, game->obj.vertices[polygon.verticesIndices[polygon.verticesIndices.size() - 1] - 1], game->obj.vertices[polygon.verticesIndices[0] - 1]);
-
-		//LineTo(memoryDC, game->obj.vertices[polygon.verticesIndices[0] - 1].x, game->obj.vertices[polygon.verticesIndices[0] - 1].y);
-	}
-
 	InvalidateRect(hWnd, NULL, false);
 }

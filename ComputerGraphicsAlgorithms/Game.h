@@ -4,6 +4,7 @@
 
 #include "Camera.h"
 #include "Obj.h"
+#include "framework.h"
 
 namespace cga
 {
@@ -22,6 +23,8 @@ public:
 	Obj initialObj, obj;
 
 	Game(GetTickCountCallback aGetTickCountCallback, Callback aInvalidateCallback);
+
+	void SetDeviceContext(HDC aDeviceContext);
 
 	// event processors
 	void OnKeyDown(unsigned int virtualKeyCode);
@@ -44,6 +47,8 @@ protected:
 	int lastX = width / 2, lastY = height / 2;
 	bool firstMouse = true;
 
+	HDC deviceContext;
+
 	// callbacks
 	GetTickCountCallback getTickCountCallback;
 	Callback invalidatedCallback;
@@ -51,6 +56,8 @@ protected:
 	void DoMovement();
 
 	void UpdateScene();
+
+	void Render();
 };
 
 }
