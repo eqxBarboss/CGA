@@ -47,7 +47,7 @@ void Renderer::Render(std::unique_ptr<Scene> &scene)
 
 	for (int i = 0; i < tasksToStart; i++)
 	{
-		CalculateVertices(1
+		threadPool.push(CalculateVertices
 						, std::ref<Obj>(renderTarget)
 						, i * step
 						, i == (tasksToStart - 1) ? renderTarget.vertices.size() : (i + 1) * step
