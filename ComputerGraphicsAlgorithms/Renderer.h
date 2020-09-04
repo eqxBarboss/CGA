@@ -17,8 +17,6 @@ namespace cga
 class Renderer
 {
 public:
-	int width, height;
-
 	Renderer(int aWidth, int aHeight, std::function<void()> aInvalidateCallback);
 
 	Buffer& GetCurrentBuffer();
@@ -29,6 +27,8 @@ private:
 	static int workingThreads;
 	static std::mutex mutex;
 	static std::condition_variable cv;
+
+	int width, height;
 
 	ctpl::thread_pool threadPool;
 	int threadCount;
