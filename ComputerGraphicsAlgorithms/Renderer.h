@@ -26,8 +26,11 @@ public:
 	void Render(std::unique_ptr<Scene> &scene);
 
 private:
+	static int workingThreads;
+	static std::mutex mutex;
+	static std::condition_variable cv;
+
 	ctpl::thread_pool threadPool;
-	std::mutex mutex;
 	int threadCount;
 
 	Buffer buffer, backBuffer;
@@ -36,6 +39,8 @@ private:
 
 	static void CalculateVertices(int id, Obj &renderTarget, int first, int last, const glm::mat4 &pvm, const glm::mat4 &viewPort);
 	static void DrawPolygons(int id, Buffer &buffer, Obj &renderTarget, int first, int last);
+	static void WaitForThreads();
+	static void FinishThreadWork();
 };
 
 }

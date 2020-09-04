@@ -23,7 +23,6 @@ public:
 	void OnKeyDown(unsigned int virtualKeyCode);
 	void OnKeyUp(unsigned int virtualKeyCode);
 	void OnMouseMove(int newX, int newY);
-	void OnWheelScroll(int delta);
 
 	Buffer& GetCurrentBuffer();
 
@@ -42,12 +41,14 @@ private:
 
 	int width, height;
 	int lastX, lastY;
+	int newX, newY;
 	bool firstMouse = true;
 
 	// callbacks
 	std::function<int()> getTickCountCallback;
 
 	void DoMovement();
+	void RotateCamera();
 
 	void OnUpdated();
 };

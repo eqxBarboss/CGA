@@ -33,6 +33,7 @@ void Game::GameCycle()
 	lastTick = currentTick;
 	
 	DoMovement();
+	RotateCamera();
 
 	if (updated)
 	{
@@ -74,6 +75,23 @@ void Game::DoMovement()
 	}
 }
 
+void Game::RotateCamera()
+{
+	if (firstMouse) return;
+
+	float xOffset = newX - lastX;
+	float yOffset = lastY - newY;
+
+	if (xOffset == 0 && yOffset == 0)
+		return;
+
+	lastX = newX;
+	lastY = newY;
+
+	scene->camera.ProcessMouseMovement(xOffset, yOffset);
+	updated = true;
+}
+
 void Game::OnKeyDown(unsigned int virtualKeyCode)
 {
 	keyStates[virtualKeyCode] = true;
@@ -84,39 +102,19 @@ void Game::OnKeyUp(unsigned int virtualKeyCode)
 	keyStates[virtualKeyCode] = false;
 }
 
-void Game::OnMouseMove(int newX, int newY)
+void Game::OnMouseMove(int aNewX, int aNewY)
 {
 	if (scene == nullptr) return;
 
 	if (firstMouse)
 	{
-		lastX = newX;
-		lastY = newY;
+		lastX = aNewX;
+		lastY = aNewY;
 		firstMouse = false;
 	}
 
-	float xoffset = newX - lastX;
-	float yoffset = lastY - newY;
-
-	if (xoffset == 0 && yoffset == 0)
-		return;
-
-	lastX = newX;
-	lastY = newY;
-
-	scene->camera.ProcessMouseMovement(xoffset, yoffset);
-	updated = true;
-}
-
-void Game::OnWheelScroll(int delta)
-{
-	if (scene == nullptr) return;
-
-	if (delta == 0)
-		return;
-
-	scene->camera.ProcessMouseScroll(delta);
-	updated = true;
+	newX = aNewX;
+	newY = aNewY;
 }
 
 void Game::LoadScene(std::string pathToObject)
@@ -126,9 +124,9 @@ void Game::LoadScene(std::string pathToObject)
 	if (loadedObj)
 	{
 		scene = std::make_unique<Scene>(Camera(glm::vec3(0.0f, 0.0f, 2.5f)), loadedObj.value());
+		firstMouse = true;
+		updated = true;
 	}
-
-	updated = true;
 }
 
 }

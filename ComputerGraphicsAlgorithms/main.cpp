@@ -203,12 +203,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			game->OnMouseMove(xPos, yPos);
 		}
 		break;
-	case WM_MOUSEWHEEL:
-		{
-			// TODO ...
-			game->OnWheelScroll(-5);
-		}
-		break;
     case WM_PAINT:
         {
             PAINTSTRUCT ps;

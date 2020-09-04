@@ -1,11 +1,16 @@
 #include "Renderer.h"
 
 #include <thread>
+#include <algorithm>
 
 #include "Math.h"
 
 namespace cga
 {
+
+int Renderer::workingThreads;
+std::mutex Renderer::mutex;
+std::condition_variable Renderer::cv;
 
 Renderer::Renderer(int aWidth, int aHeight, std::function<void()> aInvalidateCallback)
 	: width(aWidth),
@@ -57,48 +62,39 @@ void Renderer::Render(std::unique_ptr<Scene> &scene)
 
 	const auto pvm = projection * view * model;
 
-	int step = renderTarget.vertices.size() / threadCount;
-	if (step == 0) step = renderTarget.vertices.size();
-	int first = 0;
+	int step = (std::max)(renderTarget.vertices.size() / threadCount, renderTarget.vertices.size());
+	workingThreads = step == renderTarget.vertices.size() ? 1 : threadCount;
+	int tasksToStart = workingThreads;
 
-	while (1)
+	for (int i = 0; i < tasksToStart; i++)
 	{
-		int last = first + step;
-		if (last > renderTarget.vertices.size()) last = renderTarget.vertices.size();
-
-		threadPool.push(CalculateVertices, std::ref<Obj>(renderTarget), first, last, std::ref<const glm::mat4>(pvm), std::ref<const glm::mat4>(viewPort));
-
-		if (last == renderTarget.vertices.size()) break;
-		first += step;
+		threadPool.push(CalculateVertices
+						, std::ref<Obj>(renderTarget)
+						, i * step
+						, i == (tasksToStart - 1) ? renderTarget.vertices.size() : (i + 1) * step
+						, std::ref<const glm::mat4>(pvm)
+						, std::ref<const glm::mat4>(viewPort));
 	}
 
-	while (1)
-	{
-		if (threadPool.n_idle() == threadCount) break;
-	}
-
+	// Some stuff until waiting
 	backBuffer.ClearWithColor(0);
 
-	step = renderTarget.polygons.size() / threadCount;
-	if (step == 0) step = renderTarget.polygons.size();
-	first = 0;
+	WaitForThreads();
 
-	while (1)
+	step = (std::max)(renderTarget.polygons.size() / threadCount, renderTarget.polygons.size());
+	workingThreads = step == renderTarget.polygons.size() ? 1 : threadCount;
+	tasksToStart = workingThreads;
+
+	for (int i = 0; i < tasksToStart; i++)
 	{
-		int last = first + step;
-		if (last > renderTarget.polygons.size()) last = renderTarget.polygons.size();
-
-		//threadPool.push(DrawPolygons, std::ref<Buffer>(backBuffer), std::ref<Obj>(renderTarget), first, last);
-		DrawPolygons(0, backBuffer, renderTarget, first, last);
-
-		if (last == renderTarget.polygons.size()) break;
-		first += step;
+		threadPool.push(DrawPolygons
+						, std::ref<Buffer>(backBuffer)
+						, std::ref<Obj>(renderTarget)
+						, i * step
+						, i == (tasksToStart - 1) ? renderTarget.polygons.size() : (i + 1) * step);
 	}
-
-	while (1)
-	{
-		if (threadPool.n_idle() == threadCount) break;
-	}
+	
+	WaitForThreads();
 
 	auto temp = buffer.data;
 	buffer.data = backBuffer.data;
@@ -122,6 +118,8 @@ void Renderer::CalculateVertices(int id, Obj &renderTarget, int first, int last,
 
 		vertices[i] = viewPort * vertices[i];
 	}
+
+	FinishThreadWork();
 }
 
 void Renderer::DrawPolygons(int id, Buffer &buffer, Obj &renderTarget, int first, int last)
@@ -137,6 +135,28 @@ void Renderer::DrawPolygons(int id, Buffer &buffer, Obj &renderTarget, int first
 		}
 
 		RasterizeLine(buffer, vertices[polygons[j].verticesIndices[polygons[j].verticesIndices.size() - 1] - 1], vertices[polygons[j].verticesIndices[0] - 1]);
+	}
+
+	FinishThreadWork();
+}
+
+void Renderer::WaitForThreads()
+{
+	std::unique_lock<std::mutex> lock(mutex);
+	if (workingThreads != 0)
+	{
+		cv.wait(lock);
+	}
+}
+
+void Renderer::FinishThreadWork()
+{
+	std::unique_lock<std::mutex> lock(mutex);
+	workingThreads--;
+	if (workingThreads == 0)
+	{
+		lock.unlock();
+		cv.notify_one();
 	}
 }
 
