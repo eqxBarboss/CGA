@@ -15,6 +15,7 @@
 #define MAX_LOADSTRING 100
 #define WIDTH 1920
 #define HEIGHT 1080
+#define IDT_TIMER 1
 
 // Глобальные переменные:
 HINSTANCE hInst;                                // текущий экземпляр
@@ -69,7 +70,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
             DispatchMessage(&msg);
         }
 
-		game->GameCycle();
+		//game->GameCycle();
     }
 
     return (int) msg.wParam;
@@ -147,6 +148,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		{
             OnCreate(hWnd);
 		}
+		break;
+	case WM_TIMER:
+		game->GameCycle();
 		break;
     case WM_COMMAND:
         {
@@ -256,5 +260,5 @@ void OnInvalidated()
 
 void OnCreate(HWND hWnd)
 {
-
+	SetTimer(hWnd, IDT_TIMER, 15, (TIMERPROC)NULL);
 }
