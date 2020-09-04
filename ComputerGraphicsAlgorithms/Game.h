@@ -5,8 +5,7 @@
 #include <memory>
 #include <functional>
 
-#include "framework.h"
-
+#include "Buffer.h"
 #include "Scene.h"
 #include "Renderer.h"
 
@@ -18,13 +17,15 @@ const int AngleStep = 1;
 class Game
 {
 public:
-	Game(std::function<int()> aGetTickCountCallback, std::function<void()> aInvalidateCallback, HDC aDeviceContext, int aWidth, int aHeight);
+	Game(std::function<int()> aGetTickCountCallback, std::function<void()> aInvalidateCallback, int aWidth, int aHeight);
 
 	// event processors
 	void OnKeyDown(unsigned int virtualKeyCode);
 	void OnKeyUp(unsigned int virtualKeyCode);
 	void OnMouseMove(int newX, int newY);
 	void OnWheelScroll(int delta);
+
+	Buffer& GetCurrentBuffer();
 
 	void LoadScene(std::string pathToObject);
 

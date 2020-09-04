@@ -7,9 +7,9 @@
 namespace cga
 {
 
-Game::Game(std::function<int()> aGetTickCountCallback, std::function<void()> aInvalidateCallback, HDC aDeviceContext, int aWidth, int aHeight)
+Game::Game(std::function<int()> aGetTickCountCallback, std::function<void()> aInvalidateCallback, int aWidth, int aHeight)
 	: getTickCountCallback(aGetTickCountCallback),
-	renderer(aWidth, aHeight, aDeviceContext, aInvalidateCallback),
+	renderer(aWidth, aHeight, aInvalidateCallback),
 	width(aWidth),
 	height(aHeight),
 	lastX((float)width / 2),
@@ -17,6 +17,11 @@ Game::Game(std::function<int()> aGetTickCountCallback, std::function<void()> aIn
 	keyStates(1024, false)
 {
 	lastTick = getTickCountCallback();
+}
+
+Buffer& Game::GetCurrentBuffer()
+{
+	return renderer.GetCurrentBuffer();
 }
 
 void Game::GameCycle()

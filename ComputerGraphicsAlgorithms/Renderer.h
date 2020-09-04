@@ -7,8 +7,7 @@
 #include <ctpl/ctpl_stl.h>
 #include <glm/glm.hpp>
 
-#include "framework.h"
-
+#include "Buffer.h"
 #include "Scene.h"
 #include "Obj.h"
 
@@ -20,7 +19,9 @@ class Renderer
 public:
 	int width, height;
 
-	Renderer(int aWidth, int aHeight, HDC aDeviceContext, std::function<void()> aInvalidateCallback);
+	Renderer(int aWidth, int aHeight, std::function<void()> aInvalidateCallback);
+
+	Buffer& GetCurrentBuffer();
 
 	void Render(std::unique_ptr<Scene> &scene);
 
@@ -29,11 +30,12 @@ private:
 	std::mutex mutex;
 	int threadCount;
 
-	HDC deviceContext;
+	Buffer buffer, backBuffer;
+
 	std::function<void()> aInvalidateCallback;
 
 	void CalculateVertices(std::vector<glm::vec4> &vertices, int first, int last, glm::mat4 pvm, glm::mat4 viewPort);
-	void DrawPolygons(std::vector<Polygon> &polygons, std::vector<glm::vec4> &vertices, int first, int last);
+	static void DrawPolygons(int id, Buffer &buffer, std::vector<Polygon> &polygons, std::vector<glm::vec4> &vertices, int first, int last);
 };
 
 }

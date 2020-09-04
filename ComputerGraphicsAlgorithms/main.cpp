@@ -26,6 +26,7 @@ HDC memoryDC;
 BITMAP bitmap;
 HBITMAP hBitmap;
 
+void OnInvalidated();
 void OnCreate(HWND hWnd);
 
 std::unique_ptr<cga::Game> game;
@@ -41,6 +42,8 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
                      _In_ LPWSTR    lpCmdLine,
                      _In_ int       nCmdShow)
 {
+	game = std::make_unique<cga::Game>(GetTickCount64, OnInvalidated, WIDTH, HEIGHT);
+
     UNREFERENCED_PARAMETER(hPrevInstance);
     UNREFERENCED_PARAMETER(lpCmdLine);
 
@@ -214,8 +217,17 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         {
             PAINTSTRUCT ps;
 			hdc = BeginPaint(hWnd, &ps);
+
+			auto memoryDC = CreateCompatibleDC(hdc);
+			HBITMAP map = CreateBitmap(WIDTH, HEIGHT, 1, 8 * sizeof(COLORREF), (void*)game->GetCurrentBuffer().data);
+			auto old = SelectObject(memoryDC, map);
+
 			BitBlt(hdc, 0, 0, WIDTH, HEIGHT, memoryDC, 0, 0, SRCCOPY);
 			EndPaint(hWnd, &ps);
+
+			SelectObject(memoryDC, old);
+			DeleteObject(map);
+			DeleteDC(memoryDC);
         }
         break;
     case WM_DESTROY:
@@ -261,11 +273,9 @@ void OnCreate(HWND hWnd)
     SelectObject(memoryDC, hBitmap);
     DeleteObject(hBitmap);
     
-    auto brush = CreateSolidBrush(RGB(255, 255, 255));
+    auto brush = CreateSolidBrush(RGB(0, 0, 0));
     auto prev = SelectObject(memoryDC, brush);
     Rectangle(memoryDC, 0, 0, WIDTH, HEIGHT);
     SelectObject(memoryDC, prev);
     DeleteObject(brush);
-
-    game = std::make_unique<cga::Game>(GetTickCount64, OnInvalidated, memoryDC, WIDTH, HEIGHT);
 }

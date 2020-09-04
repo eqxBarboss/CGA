@@ -57,6 +57,9 @@
     <ClInclude Include="Renderer.h">
       <Filter>Исходные файлы\Models</Filter>
     </ClInclude>
+    <ClInclude Include="Buffer.h">
+      <Filter>Исходные файлы\Models</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">

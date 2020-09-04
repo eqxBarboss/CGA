@@ -7,39 +7,42 @@
 namespace cga
 {
 
-Renderer::Renderer(int aWidth, int aHeight, HDC aDeviceContext, std::function<void()> aInvalidateCallback)
+Renderer::Renderer(int aWidth, int aHeight, std::function<void()> aInvalidateCallback)
 	: width(aWidth),
 	height(aHeight),
-	deviceContext(aDeviceContext),
 	aInvalidateCallback(aInvalidateCallback),
 	threadCount(std::thread::hardware_concurrency()),
-	threadPool(std::thread::hardware_concurrency())
+	threadPool(std::thread::hardware_concurrency()),
+	buffer(aWidth, aHeight, 0),
+	backBuffer(aWidth, aHeight, 0)
 {
 
 }
 
-inline void RasterizeLine(HDC dc, glm::vec4 a, glm::vec4 b)
+Buffer& Renderer::GetCurrentBuffer()
 {
-	MoveToEx(dc, a.x, a.y, NULL);
-	LineTo(dc, b.x, b.y);
+	return buffer;
+}
 
-	//auto dx = b.x - a.x;
-	//auto dy = b.y - a.y;
+inline void RasterizeLine(Buffer &buffer, glm::vec4 a, glm::vec4 b)
+{
+	auto dx = b.x - a.x;
+	auto dy = b.y - a.y;
 
-	//auto steps = abs(dx) > abs(dy) ? abs(dx) : abs(dy);
+	auto steps = abs(dx) > abs(dy) ? abs(dx) : abs(dy);
 
-	//auto Xinc = dx / (float)steps;
-	//auto Yinc = dy / (float)steps;
+	auto Xinc = dx / (float)steps;
+	auto Yinc = dy / (float)steps;
 
-	//auto X = a.x;
-	//auto Y = a.y;
+	auto X = a.x;
+	auto Y = a.y;
 
-	//for (int i = 0; i <= steps; i++)
-	//{
-	//	SetPixel(dc, X, Y, RGB(0, 0, 0));
-	//	X += Xinc;
-	//	Y += Yinc;
-	//}
+	for (int i = 0; i <= steps; i++)
+	{
+		buffer.SetPixel(X, Y, RGB(255, 255, 255));
+		X += Xinc;
+		Y += Yinc;
+	}
 }
 
 void Renderer::Render(std::unique_ptr<Scene> &scene)
@@ -79,10 +82,36 @@ void Renderer::Render(std::unique_ptr<Scene> &scene)
 
 	//CalculateVertices(obj.vertices, 0, obj.vertices.size(), pvm, viewPort);
 
-	SelectObject(deviceContext, GetStockObject(WHITE_BRUSH));
-	Rectangle(deviceContext, 0, 0, width, height);
+	backBuffer.ClearWithColor(0);
 
-	DrawPolygons(obj.polygons, obj.vertices, 0, obj.polygons.size());
+	DrawPolygons(0, backBuffer, obj.polygons, obj.vertices, 0, obj.polygons.size());
+
+	//step = obj.polygons.size() / threadCount;
+	//if (step == 0) step = obj.polygons.size();
+	//first = 0;
+
+	//while (1)
+	//{
+	//	int last = first + step;
+	//	if (last > obj.polygons.size()) last = obj.polygons.size();
+
+	//	threadPool.push([this, &obj, first, last](int id)
+	//		{
+	//			this->DrawPolygons(this->backBuffer, obj.polygons, obj.vertices, first, last);
+	//		});
+
+	//	if (last == obj.polygons.size()) break;
+	//	first += step;
+	//}
+
+	//while (1)
+	//{
+	//	if (threadPool.n_idle() == threadCount) break;
+	//}
+
+	auto temp = buffer.data;
+	buffer.data = backBuffer.data;
+	backBuffer.data = temp;
 
 	aInvalidateCallback();
 }
@@ -102,16 +131,16 @@ void Renderer::CalculateVertices(std::vector<glm::vec4> &vertices, int first, in
 	}
 }
 
-void Renderer::DrawPolygons(std::vector<Polygon> &polygons, std::vector<glm::vec4> &vertices, int first, int last)
+void Renderer::DrawPolygons(int id, Buffer &buffer, std::vector<Polygon> &polygons, std::vector<glm::vec4> &vertices, int first, int last)
 {
 	for (int j = first; j < last; j++)
 	{
 		for (int i = 0; i < polygons[j].verticesIndices.size() - 1; i++)
 		{
-			RasterizeLine(deviceContext, vertices[polygons[j].verticesIndices[i] - 1], vertices[polygons[j].verticesIndices[i + 1] - 1]);
+			RasterizeLine(buffer, vertices[polygons[j].verticesIndices[i] - 1], vertices[polygons[j].verticesIndices[i + 1] - 1]);
 		}
 
-		RasterizeLine(deviceContext, vertices[polygons[j].verticesIndices[polygons[j].verticesIndices.size() - 1] - 1], vertices[polygons[j].verticesIndices[0] - 1]);
+		RasterizeLine(buffer, vertices[polygons[j].verticesIndices[polygons[j].verticesIndices.size() - 1] - 1], vertices[polygons[j].verticesIndices[0] - 1]);
 	}
 }
 
