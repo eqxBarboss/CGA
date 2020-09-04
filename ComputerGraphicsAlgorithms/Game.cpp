@@ -33,10 +33,16 @@ void Game::GameCycle()
 	lastTick = currentTick;
 	
 	DoMovement();
+
+	if (updated)
+	{
+		OnUpdated();
+	}
 }
 
 void Game::OnUpdated()
 {
+	updated = false;
 	renderer.Render(scene);
 }
 
@@ -45,7 +51,6 @@ void Game::DoMovement()
 	if (scene == nullptr) return;
 
 	Camera &camera = scene->camera;
-	bool updated = false;
 
 	if (keyStates[0x57])
 	{
@@ -67,9 +72,6 @@ void Game::DoMovement()
 		camera.ProcessKeyboard(RIGHT, deltaTime);
 		updated = true;
 	}
-
-	if (updated)
-		OnUpdated();
 }
 
 void Game::OnKeyDown(unsigned int virtualKeyCode)
@@ -103,7 +105,7 @@ void Game::OnMouseMove(int newX, int newY)
 	lastY = newY;
 
 	scene->camera.ProcessMouseMovement(xoffset, yoffset);
-	OnUpdated();
+	updated = true;
 }
 
 void Game::OnWheelScroll(int delta)
@@ -114,7 +116,7 @@ void Game::OnWheelScroll(int delta)
 		return;
 
 	scene->camera.ProcessMouseScroll(delta);
-	OnUpdated();
+	updated = true;
 }
 
 void Game::LoadScene(std::string pathToObject)
@@ -126,7 +128,7 @@ void Game::LoadScene(std::string pathToObject)
 		scene = std::make_unique<Scene>(Camera(glm::vec3(0.0f, 0.0f, 2.5f)), loadedObj.value());
 	}
 
-	OnUpdated();
+	updated = true;
 }
 
 }

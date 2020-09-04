@@ -37,6 +37,7 @@ private:
 
 	unsigned long long lastTick, deltaTime = 0;
 
+	bool updated = false;
 	std::vector<bool> keyStates;
 
 	int width, height;

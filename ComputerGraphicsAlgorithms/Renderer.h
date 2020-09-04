@@ -34,8 +34,8 @@ private:
 
 	std::function<void()> aInvalidateCallback;
 
-	void CalculateVertices(std::vector<glm::vec4> &vertices, int first, int last, glm::mat4 pvm, glm::mat4 viewPort);
-	static void DrawPolygons(int id, Buffer &buffer, std::vector<Polygon> &polygons, std::vector<glm::vec4> &vertices, int first, int last);
+	static void CalculateVertices(int id, Obj &renderTarget, int first, int last, const glm::mat4 &pvm, const glm::mat4 &viewPort);
+	static void DrawPolygons(int id, Buffer &buffer, Obj &renderTarget, int first, int last);
 };
 
 }

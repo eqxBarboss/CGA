@@ -47,7 +47,7 @@ inline void RasterizeLine(Buffer &buffer, glm::vec4 a, glm::vec4 b)
 
 void Renderer::Render(std::unique_ptr<Scene> &scene)
 {
-	Obj obj = scene->obj;
+	Obj renderTarget = scene->obj;
 	Camera &camera = scene->camera;
 
 	const auto model = glm::mat4(1.0f);
@@ -57,21 +57,18 @@ void Renderer::Render(std::unique_ptr<Scene> &scene)
 
 	const auto pvm = projection * view * model;
 
-	int step = obj.vertices.size() / threadCount;
-	if (step == 0) step = obj.vertices.size();
+	int step = renderTarget.vertices.size() / threadCount;
+	if (step == 0) step = renderTarget.vertices.size();
 	int first = 0;
 
 	while (1)
 	{
 		int last = first + step;
-		if (last > obj.vertices.size()) last = obj.vertices.size();
+		if (last > renderTarget.vertices.size()) last = renderTarget.vertices.size();
 
-		threadPool.push([this, &obj, first, last, pvm, viewPort](int id)
-			{
-				this->CalculateVertices(obj.vertices, first, last, pvm, viewPort);
-			});
+		threadPool.push(CalculateVertices, std::ref<Obj>(renderTarget), first, last, std::ref<const glm::mat4>(pvm), std::ref<const glm::mat4>(viewPort));
 
-		if (last == obj.vertices.size()) break;
+		if (last == renderTarget.vertices.size()) break;
 		first += step;
 	}
 
@@ -80,34 +77,28 @@ void Renderer::Render(std::unique_ptr<Scene> &scene)
 		if (threadPool.n_idle() == threadCount) break;
 	}
 
-	//CalculateVertices(obj.vertices, 0, obj.vertices.size(), pvm, viewPort);
-
 	backBuffer.ClearWithColor(0);
 
-	DrawPolygons(0, backBuffer, obj.polygons, obj.vertices, 0, obj.polygons.size());
+	step = renderTarget.polygons.size() / threadCount;
+	if (step == 0) step = renderTarget.polygons.size();
+	first = 0;
 
-	//step = obj.polygons.size() / threadCount;
-	//if (step == 0) step = obj.polygons.size();
-	//first = 0;
+	while (1)
+	{
+		int last = first + step;
+		if (last > renderTarget.polygons.size()) last = renderTarget.polygons.size();
 
-	//while (1)
-	//{
-	//	int last = first + step;
-	//	if (last > obj.polygons.size()) last = obj.polygons.size();
+		//threadPool.push(DrawPolygons, std::ref<Buffer>(backBuffer), std::ref<Obj>(renderTarget), first, last);
+		DrawPolygons(0, backBuffer, renderTarget, first, last);
 
-	//	threadPool.push([this, &obj, first, last](int id)
-	//		{
-	//			this->DrawPolygons(this->backBuffer, obj.polygons, obj.vertices, first, last);
-	//		});
+		if (last == renderTarget.polygons.size()) break;
+		first += step;
+	}
 
-	//	if (last == obj.polygons.size()) break;
-	//	first += step;
-	//}
-
-	//while (1)
-	//{
-	//	if (threadPool.n_idle() == threadCount) break;
-	//}
+	while (1)
+	{
+		if (threadPool.n_idle() == threadCount) break;
+	}
 
 	auto temp = buffer.data;
 	buffer.data = backBuffer.data;
@@ -116,8 +107,10 @@ void Renderer::Render(std::unique_ptr<Scene> &scene)
 	aInvalidateCallback();
 }
 
-void Renderer::CalculateVertices(std::vector<glm::vec4> &vertices, int first, int last, glm::mat4 pvm, glm::mat4 viewPort)
+void Renderer::CalculateVertices(int id, Obj &renderTarget, int first, int last, const glm::mat4 &pvm, const glm::mat4 &viewPort)
 {
+	auto &vertices = renderTarget.vertices;
+
 	for (int i = first; i < last; i++)
 	{
 		vertices[i] = pvm * vertices[i];
@@ -131,8 +124,11 @@ void Renderer::CalculateVertices(std::vector<glm::vec4> &vertices, int first, in
 	}
 }
 
-void Renderer::DrawPolygons(int id, Buffer &buffer, std::vector<Polygon> &polygons, std::vector<glm::vec4> &vertices, int first, int last)
+void Renderer::DrawPolygons(int id, Buffer &buffer, Obj &renderTarget, int first, int last)
 {
+	auto &vertices = renderTarget.vertices;
+	auto &polygons = renderTarget.polygons;
+
 	for (int j = first; j < last; j++)
 	{
 		for (int i = 0; i < polygons[j].verticesIndices.size() - 1; i++)

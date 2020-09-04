@@ -21,10 +21,6 @@ HINSTANCE hInst;                                // текущий экземпл
 WCHAR szTitle[MAX_LOADSTRING];                  // Текст строки заголовка
 WCHAR szWindowClass[MAX_LOADSTRING];            // имя класса главного окна
 HWND hWnd;
-HDC hdc;           
-HDC memoryDC;
-BITMAP bitmap;
-HBITMAP hBitmap;
 
 void OnInvalidated();
 void OnCreate(HWND hWnd);
@@ -216,7 +212,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     case WM_PAINT:
         {
             PAINTSTRUCT ps;
-			hdc = BeginPaint(hWnd, &ps);
+			HDC hdc = BeginPaint(hWnd, &ps);
 
 			auto memoryDC = CreateCompatibleDC(hdc);
 			HBITMAP map = CreateBitmap(WIDTH, HEIGHT, 1, 8 * sizeof(COLORREF), (void*)game->GetCurrentBuffer().data);
@@ -266,16 +262,5 @@ void OnInvalidated()
 
 void OnCreate(HWND hWnd)
 {
-    hdc = GetDC(hWnd);
-    hBitmap = CreateCompatibleBitmap(hdc, WIDTH, HEIGHT);
-    memoryDC = CreateCompatibleDC(hdc);
-    ReleaseDC(hWnd, hdc);
-    SelectObject(memoryDC, hBitmap);
-    DeleteObject(hBitmap);
-    
-    auto brush = CreateSolidBrush(RGB(0, 0, 0));
-    auto prev = SelectObject(memoryDC, brush);
-    Rectangle(memoryDC, 0, 0, WIDTH, HEIGHT);
-    SelectObject(memoryDC, prev);
-    DeleteObject(brush);
+
 }
