@@ -40,7 +40,6 @@ public:
 
 	inline void SetPixel(int x, int y, COLORREF color)
 	{
-		if (x < 0 || x >= width || y < 0 || y >= height) return;
 		data[y * width + x] = color;
 	}
 

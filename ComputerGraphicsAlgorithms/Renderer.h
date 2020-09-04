@@ -27,8 +27,7 @@ private:
 	static int workingThreads;
 	static std::mutex mutex;
 	static std::condition_variable cv;
-
-	int width, height;
+	static int width, height;
 
 	ctpl::thread_pool threadPool;
 	int threadCount;
@@ -41,6 +40,30 @@ private:
 	static void DrawPolygons(int id, Buffer &buffer, Obj &renderTarget, int first, int last);
 	static void WaitForThreads();
 	static void FinishThreadWork();
+
+	static inline void RasterizeLine(Buffer& buffer, glm::vec4 a, glm::vec4 b)
+	{
+		if (a.x < 0 || a.x >= width || a.y < 0 || a.y >= height ||
+			b.x < 0 || b.x >= width || b.y < 0 || b.y >= height) return;
+
+		auto dx = b.x - a.x;
+		auto dy = b.y - a.y;
+
+		auto steps = abs(dx) > abs(dy) ? abs(dx) : abs(dy);
+
+		auto Xinc = dx / (float)steps;
+		auto Yinc = dy / (float)steps;
+
+		auto x = a.x;
+		auto y = a.y;
+
+		for (int i = 0; i <= steps; i++)
+		{
+			buffer.SetPixel(x, y, RGB(255, 255, 255));
+			x += Xinc;
+			y += Yinc;
+		}
+	}
 };
 
 }

@@ -8,46 +8,25 @@
 namespace cga
 {
 
+int Renderer::width, Renderer::height;
 int Renderer::workingThreads;
 std::mutex Renderer::mutex;
 std::condition_variable Renderer::cv;
 
 Renderer::Renderer(int aWidth, int aHeight, std::function<void()> aInvalidateCallback)
-	: width(aWidth),
-	height(aHeight),
-	aInvalidateCallback(aInvalidateCallback),
+	: aInvalidateCallback(aInvalidateCallback),
 	threadCount(std::thread::hardware_concurrency()),
 	threadPool(std::thread::hardware_concurrency()),
 	buffer(aWidth, aHeight, 0),
 	backBuffer(aWidth, aHeight, 0)
 {
-
+	width = aWidth;
+	height = aHeight;
 }
 
 Buffer& Renderer::GetCurrentBuffer()
 {
 	return buffer;
-}
-
-inline void RasterizeLine(Buffer &buffer, glm::vec4 a, glm::vec4 b)
-{
-	auto dx = b.x - a.x;
-	auto dy = b.y - a.y;
-
-	auto steps = abs(dx) > abs(dy) ? abs(dx) : abs(dy);
-
-	auto Xinc = dx / (float)steps;
-	auto Yinc = dy / (float)steps;
-
-	auto x = a.x;
-	auto y = a.y;
-
-	for (int i = 0; i <= steps; i++)
-	{
-		buffer.SetPixel(x, y, RGB(255, 255, 255));
-		x += Xinc;
-		y += Yinc;
-	}
 }
 
 void Renderer::Render(std::unique_ptr<Scene> &scene)
