@@ -39,14 +39,14 @@ inline void RasterizeLine(Buffer &buffer, glm::vec4 a, glm::vec4 b)
 	auto Xinc = dx / (float)steps;
 	auto Yinc = dy / (float)steps;
 
-	auto X = a.x;
-	auto Y = a.y;
+	auto x = a.x;
+	auto y = a.y;
 
 	for (int i = 0; i <= steps; i++)
 	{
-		buffer.SetPixel(X, Y, RGB(255, 255, 255));
-		X += Xinc;
-		Y += Yinc;
+		buffer.SetPixel(x, y, RGB(255, 255, 255));
+		x += Xinc;
+		y += Yinc;
 	}
 }
 
