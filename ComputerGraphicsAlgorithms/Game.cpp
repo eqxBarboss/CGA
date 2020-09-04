@@ -117,6 +117,17 @@ void Game::OnMouseMove(int aNewX, int aNewY)
 	newY = aNewY;
 }
 
+void Game::OnWheelScroll(int delta)
+{
+	if (scene == nullptr) return;
+
+	if (delta == 0)
+		return;
+
+	scene->camera.ProcessMouseScroll(delta);
+	updated = true;
+}
+
 void Game::LoadScene(std::string pathToObject)
 {
 	ObjParser parser;

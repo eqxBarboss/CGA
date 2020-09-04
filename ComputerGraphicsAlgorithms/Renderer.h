@@ -11,6 +11,8 @@
 #include "Scene.h"
 #include "Obj.h"
 
+//#define DISCARD_VERTICES
+
 namespace cga
 {
 

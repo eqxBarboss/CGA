@@ -23,6 +23,7 @@ public:
 	void OnKeyDown(unsigned int virtualKeyCode);
 	void OnKeyUp(unsigned int virtualKeyCode);
 	void OnMouseMove(int newX, int newY);
+	void OnWheelScroll(int delta);
 
 	Buffer& GetCurrentBuffer();
 

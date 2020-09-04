@@ -69,8 +69,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
             TranslateMessage(&msg);
             DispatchMessage(&msg);
         }
-
-		//game->GameCycle();
     }
 
     return (int) msg.wParam;
@@ -142,6 +140,8 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 //
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
+	MSLLHOOKSTRUCT* info = reinterpret_cast<MSLLHOOKSTRUCT*>(lParam);
+
     switch (message)
     {
 	case WM_CREATE:
@@ -233,6 +233,25 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     return 0;
 }
 
+LRESULT CALLBACK MouseHookProc(int nCode, WPARAM wParam, LPARAM lParam)
+{
+	if (nCode != HC_ACTION)  // Nothing to do :(
+		return CallNextHookEx(NULL, nCode, wParam, lParam);
+
+	MSLLHOOKSTRUCT* info = reinterpret_cast<MSLLHOOKSTRUCT*>(lParam);
+
+
+	switch (wParam)
+	{
+	case WM_MOUSEWHEEL:
+		const auto delta = static_cast<std::make_signed_t<WORD>>(HIWORD(info->mouseData));
+		game->OnWheelScroll(delta / 20);
+		break;
+	}
+
+	return CallNextHookEx(NULL, nCode, wParam, lParam);
+}
+
 // Обработчик сообщений для окна "О программе".
 INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 {
@@ -260,5 +279,6 @@ void OnInvalidated()
 
 void OnCreate(HWND hWnd)
 {
+	SetWindowsHookExW(WH_MOUSE_LL, MouseHookProc, nullptr, 0);
 	SetTimer(hWnd, IDT_TIMER, 15, (TIMERPROC)NULL);
 }
