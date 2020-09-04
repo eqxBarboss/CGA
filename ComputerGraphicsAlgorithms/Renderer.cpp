@@ -1,7 +1,7 @@
 #include "Renderer.h"
 
 #include <thread>
-#include <algorithm>
+#include <algorithm> 
 
 #include "Math.h"
 
@@ -47,7 +47,7 @@ void Renderer::Render(std::unique_ptr<Scene> &scene)
 
 	for (int i = 0; i < tasksToStart; i++)
 	{
-		threadPool.push(CalculateVertices
+		CalculateVertices(1
 						, std::ref<Obj>(renderTarget)
 						, i * step
 						, i == (tasksToStart - 1) ? renderTarget.vertices.size() : (i + 1) * step
@@ -60,20 +60,23 @@ void Renderer::Render(std::unique_ptr<Scene> &scene)
 
 	WaitForThreads();
 
-	step = (std::max)(renderTarget.polygons.size() / threadCount, renderTarget.polygons.size());
-	workingThreads = step == renderTarget.polygons.size() ? 1 : threadCount;
-	tasksToStart = workingThreads;
-
-	for (int i = 0; i < tasksToStart; i++)
+	if (renderTarget.polygons.size() != 0)
 	{
-		threadPool.push(DrawPolygons
-						, std::ref<Buffer>(backBuffer)
-						, std::ref<Obj>(renderTarget)
-						, i * step
-						, i == (tasksToStart - 1) ? renderTarget.polygons.size() : (i + 1) * step);
+		step = (std::max)(renderTarget.polygons.size() / threadCount, renderTarget.polygons.size());
+		workingThreads = step == renderTarget.polygons.size() ? 1 : threadCount;
+		tasksToStart = workingThreads;
+
+		for (int i = 0; i < tasksToStart; i++)
+		{
+			threadPool.push(DrawPolygons
+				, std::ref<Buffer>(backBuffer)
+				, std::ref<Obj>(renderTarget)
+				, i * step
+				, i == (tasksToStart - 1) ? renderTarget.polygons.size() : (i + 1) * step);
+		}
+
+		WaitForThreads();
 	}
-	
-	WaitForThreads();
 
 	auto temp = buffer.data;
 	buffer.data = backBuffer.data;
@@ -94,6 +97,39 @@ void Renderer::CalculateVertices(int id, Obj &renderTarget, int first, int last,
 		vertices[i].y = vertices[i].y / vertices[i].w;
 		vertices[i].z = vertices[i].z / vertices[i].w;
 		vertices[i].w = 1.0f;
+
+#ifdef DISCARD_VERTICES
+
+		if (vertices[i].x < -1 || vertices[i].x > 1
+			|| vertices[i].y < -1 || vertices[i].y > 1
+			|| vertices[i].z < -1 || vertices[i].z > 1)
+		{
+			std::vector<int> polygonsToDelete;
+
+			for (int j = 0; j < renderTarget.polygons.size(); j++)
+			{
+				for (const auto vertexIndex : renderTarget.polygons[j].verticesIndices)
+				{
+					if ((vertexIndex - 1) == i)
+					{
+						polygonsToDelete.push_back(j);
+					}
+				}
+			}
+
+			std::sort(polygonsToDelete.begin(), polygonsToDelete.end(), std::greater<int>());
+
+			{
+				std::lock_guard<std::mutex> lock(mutex);
+
+				for (const auto polygonToDelete : polygonsToDelete)
+				{
+					renderTarget.polygons.erase(renderTarget.polygons.begin() + polygonToDelete);
+				}
+			}
+		}
+
+#endif // DISCARD_VERTICES
 
 		vertices[i] = viewPort * vertices[i];
 	}
