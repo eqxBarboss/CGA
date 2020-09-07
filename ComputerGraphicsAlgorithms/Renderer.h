@@ -46,7 +46,8 @@ private:
 	static inline void RasterizeLine(Buffer& buffer, glm::vec4 a, glm::vec4 b)
 	{
 		if (a.x < 0 || a.x >= width || a.y < 0 || a.y >= height ||
-			b.x < 0 || b.x >= width || b.y < 0 || b.y >= height) return;
+			b.x < 0 || b.x >= width || b.y < 0 || b.y >= height ||
+			a.z < -1 || a.z > 1 || b.z < -1 || b.z > 1) return;
 
 		auto dx = b.x - a.x;
 		auto dy = b.y - a.y;
