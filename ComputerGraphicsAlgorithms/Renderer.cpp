@@ -102,7 +102,7 @@ void Renderer::CalculateVertices(int id, Obj &renderTarget, int first, int last,
 
 		if (vertices[i].x < -1 || vertices[i].x > 1
 			|| vertices[i].y < -1 || vertices[i].y > 1
-			|| vertices[i].z < -1 || vertices[i].z > 1)
+			|| vertices[i].z < 0 || vertices[i].z > 1)
 		{
 			std::vector<int> polygonsToDelete;
 
