@@ -13,13 +13,13 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
-    <Filter Include="Исходные файлы\Tools">
-      <UniqueIdentifier>{8a402645-0d53-40d4-b885-d9489ef3efbe}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Исходные файлы\Math">
       <UniqueIdentifier>{ea8bef3d-b7f8-4a43-8dc1-0b4392fa56fd}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Исходные файлы\Models">
+    <Filter Include="Исходные файлы\Parsers">
+      <UniqueIdentifier>{8a402645-0d53-40d4-b885-d9489ef3efbe}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Исходные файлы\Core">
       <UniqueIdentifier>{caf8dac1-7c53-419d-a29c-e8fb64598550}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
@@ -37,28 +37,28 @@
       <Filter>Файлы заголовков</Filter>
     </ClInclude>
     <ClInclude Include="Camera.h">
-      <Filter>Исходные файлы\Models</Filter>
+      <Filter>Исходные файлы\Core</Filter>
     </ClInclude>
     <ClInclude Include="Game.h">
-      <Filter>Исходные файлы\Models</Filter>
+      <Filter>Исходные файлы\Core</Filter>
     </ClInclude>
     <ClInclude Include="Obj.h">
-      <Filter>Исходные файлы\Models</Filter>
+      <Filter>Исходные файлы\Core</Filter>
     </ClInclude>
     <ClInclude Include="ObjParser.h">
-      <Filter>Исходные файлы\Tools</Filter>
+      <Filter>Исходные файлы\Parsers</Filter>
     </ClInclude>
     <ClInclude Include="Math.h">
       <Filter>Исходные файлы\Math</Filter>
     </ClInclude>
     <ClInclude Include="Scene.h">
-      <Filter>Исходные файлы\Models</Filter>
+      <Filter>Исходные файлы\Core</Filter>
     </ClInclude>
     <ClInclude Include="Renderer.h">
-      <Filter>Исходные файлы\Models</Filter>
+      <Filter>Исходные файлы\Core</Filter>
     </ClInclude>
     <ClInclude Include="Buffer.h">
-      <Filter>Исходные файлы\Models</Filter>
+      <Filter>Исходные файлы\Core</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -66,19 +66,19 @@
       <Filter>Исходные файлы</Filter>
     </ClCompile>
     <ClCompile Include="ObjParser.cpp">
-      <Filter>Исходные файлы\Tools</Filter>
+      <Filter>Исходные файлы\Parsers</Filter>
     </ClCompile>
     <ClCompile Include="Camera.cpp">
-      <Filter>Исходные файлы\Models</Filter>
+      <Filter>Исходные файлы\Core</Filter>
     </ClCompile>
     <ClCompile Include="Game.cpp">
-      <Filter>Исходные файлы\Models</Filter>
+      <Filter>Исходные файлы\Core</Filter>
     </ClCompile>
     <ClCompile Include="Scene.cpp">
-      <Filter>Исходные файлы\Models</Filter>
+      <Filter>Исходные файлы\Core</Filter>
     </ClCompile>
     <ClCompile Include="Renderer.cpp">
-      <Filter>Исходные файлы\Models</Filter>
+      <Filter>Исходные файлы\Core</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
