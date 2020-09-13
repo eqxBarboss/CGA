@@ -1,8 +1,11 @@
 #pragma once
 
+#define NOMINMAX
+
 #include <memory>
 #include <functional>
 #include <mutex>
+#include <algorithm>
 
 #include <ctpl/ctpl_stl.h>
 #include <glm/glm.hpp>
@@ -65,6 +68,63 @@ private:
 			buffer.SetPixel(x, y, RGB(255, 255, 255));
 			x += Xinc;
 			y += Yinc;
+		}
+	}
+
+	static inline void MyCoolDrawHorLine(Buffer& buffer, int y, int x1, int x2, COLORREF color)
+	{
+		memset(buffer.data + y * width, color, x2 - x1 + 1);
+	}
+
+	static inline void RasterizeTriangle(Buffer& buffer, Polygon& polygon, const std::vector<glm::vec4>& vertices)
+	{
+		const int iv0 = polygon.verticesIndices[0];
+		const int iv1 = polygon.verticesIndices[1];
+		const int iv2 = polygon.verticesIndices[2];
+		const auto& v0 = vertices[iv0];
+		const auto& v1 = vertices[iv1];
+		const auto& v2 = vertices[iv2];
+		const int v0x = v0.x;
+		const int v0y = v0.y;
+		const int v1x = v1.x;
+		const int v1y = v1.y;
+		const int v2x = v2.x;
+		const int v2y = v2.y;
+
+		int maxY = std::max(std::max(v0y, v1y), v2y);
+		int minY = std::min(std::min(v0y, v1y), v2y);
+
+		COLORREF color = RGB(255, 255, 255);
+
+		for (int y = minY; y != maxY; y++)
+		{
+			{
+				if ((y == v0y) && (v0y == v1y))
+				{
+					MyCoolDrawHorLine(buffer, y, std::min(v0x, v1x), std::max(v0x, v1x), color);
+					continue;
+				}
+
+				if ((y == v1y) && (v1y == v2y))
+				{
+					MyCoolDrawHorLine(buffer, y, std::min(v1x, v2x), std::max(v1x, v2x), color);
+					continue;
+				}
+
+				if ((y == v2y) && (v2y == v0y))
+				{
+					MyCoolDrawHorLine(buffer, y, std::min(v2x, v0x), std::max(v2x, v0x), color);
+					continue;
+				}
+			}
+
+			int x1 = v0x + (v1x - v0x) * (y - v0y) / (v1y - v0y);
+			int x2 = v1x + (v2x - v1x) * (y - v1y) / (v2y - v1y);
+			//int x3 = v2.x + (v0.x - v2.x) * (y - v2.y) / (v0.y - v2.y);
+
+			if (x1 < x2) std::swap(x1, x2);
+
+			MyCoolDrawHorLine(buffer, y, x1, x1, color);
 		}
 	}
 };

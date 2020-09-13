@@ -66,14 +66,20 @@ void Renderer::Render(std::unique_ptr<Scene> &scene)
 		workingThreads = step == renderTarget.polygons.size() ? 1 : threadCount;
 		tasksToStart = workingThreads;
 
-		for (int i = 0; i < tasksToStart; i++)
+		DrawPolygons(1
+			, std::ref<Buffer>(backBuffer)
+			, std::ref<Obj>(renderTarget)
+			, 0
+			, renderTarget.polygons.size());
+
+		/*for (int i = 0; i < tasksToStart; i++)
 		{
 			threadPool.push(DrawPolygons
 				, std::ref<Buffer>(backBuffer)
 				, std::ref<Obj>(renderTarget)
 				, i * step
 				, i == (tasksToStart - 1) ? renderTarget.polygons.size() : (i + 1) * step);
-		}
+		}*/
 
 		WaitForThreads();
 	}
@@ -141,15 +147,21 @@ void Renderer::DrawPolygons(int id, Buffer &buffer, Obj &renderTarget, int first
 {
 	auto &vertices = renderTarget.vertices;
 	auto &polygons = renderTarget.polygons;
+	auto &normals = renderTarget.normals;
+
+	//for (int j = first; j < last; j++)
+	//{
+	//	for (int i = 0; i < polygons[j].verticesIndices.size() - 1; i++)
+	//	{
+	//		RasterizeLine(buffer, vertices[polygons[j].verticesIndices[i] - 1], vertices[polygons[j].verticesIndices[i + 1] - 1]);
+	//	}
+
+	//	RasterizeLine(buffer, vertices[polygons[j].verticesIndices[polygons[j].verticesIndices.size() - 1] - 1], vertices[polygons[j].verticesIndices[0] - 1]);
+	//}
 
 	for (int j = first; j < last; j++)
 	{
-		for (int i = 0; i < polygons[j].verticesIndices.size() - 1; i++)
-		{
-			RasterizeLine(buffer, vertices[polygons[j].verticesIndices[i] - 1], vertices[polygons[j].verticesIndices[i + 1] - 1]);
-		}
-
-		RasterizeLine(buffer, vertices[polygons[j].verticesIndices[polygons[j].verticesIndices.size() - 1] - 1], vertices[polygons[j].verticesIndices[0] - 1]);
+		RasterizeTriangle(buffer, polygons[j], vertices);
 	}
 
 	FinishThreadWork();
