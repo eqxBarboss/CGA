@@ -73,14 +73,14 @@ private:
 
 	static inline void MyCoolDrawHorLine(Buffer& buffer, int y, int x1, int x2, COLORREF color)
 	{
-		memset(buffer.data + y * width, color, x2 - x1 + 1);
+		memset(buffer.data + y * width + x1, color, sizeof(COLORREF) * (x2 - x1 + 1));
 	}
 
 	static inline void RasterizeTriangle(Buffer& buffer, Polygon& polygon, const std::vector<glm::vec4>& vertices)
 	{
-		const int iv0 = polygon.verticesIndices[0];
-		const int iv1 = polygon.verticesIndices[1];
-		const int iv2 = polygon.verticesIndices[2];
+		const int iv0 = polygon.verticesIndices[0] - 1;
+		const int iv1 = polygon.verticesIndices[1] - 1;
+		const int iv2 = polygon.verticesIndices[2] - 1;
 		const auto& v0 = vertices[iv0];
 		const auto& v1 = vertices[iv1];
 		const auto& v2 = vertices[iv2];
@@ -91,10 +91,22 @@ private:
 		const int v2x = v2.x;
 		const int v2y = v2.y;
 
+		if (v0x < 0 || v0x >= width || v0y < 0 || v0y >= height ||
+			v1x < 0 || v1x >= width || v1y < 0 || v1y >= height ||
+			v2x < 0 || v2x >= width || v2y < 0 || v2y >= height) return;
+
 		int maxY = std::max(std::max(v0y, v1y), v2y);
 		int minY = std::min(std::min(v0y, v1y), v2y);
 
 		COLORREF color = RGB(255, 255, 255);
+
+		bool a = v0y != v1y;
+		bool b = v1y != v2y;
+		bool c = v2y != v0y;
+
+		float k1 = a ? (float)(v1x - v0x) / (v1y - v0y) : 0;
+		float k2 = b ? (float)(v2x - v1x) / (v2y - v1y) : 0;
+		float k3 = c ? (float)(v0x - v2x) / (v0y - v2y) : 0;
 
 		for (int y = minY; y != maxY; y++)
 		{
@@ -118,13 +130,45 @@ private:
 				}
 			}
 
-			int x1 = v0x + (v1x - v0x) * (y - v0y) / (v1y - v0y);
-			int x2 = v1x + (v2x - v1x) * (y - v1y) / (v2y - v1y);
-			//int x3 = v2.x + (v0.x - v2.x) * (y - v2.y) / (v0.y - v2.y);
+			int x1 = v0x + k1 * (y - v0y);
+			int x2 = v1x + k2 * (y - v1y);
+			int x3 = v2x + k3 * (y - v2y);
 
-			if (x1 < x2) std::swap(x1, x2);
+			if (x1 < 0 || x1 >= width || x1 < 0 || x1 >= height ||
+				x2 < 0 || x2 >= width || x2 < 0 || x2 >= height ||
+				x3 < 0 || x3 >= width || x3 < 0 || x3 >= height) continue;
 
-			MyCoolDrawHorLine(buffer, y, x1, x1, color);
+			if (!a)
+			{
+				if (x2 > x3) std::swap(x2, x3);
+				MyCoolDrawHorLine(buffer, y, x2, x3, color);
+				continue;
+			}
+
+			if (!b)
+			{
+				if (x1 > x3) std::swap(x1, x3);
+				MyCoolDrawHorLine(buffer, y, x1, x3, color);
+				continue;
+			}
+
+			if (!c)
+			{
+				if (x1 > x2) std::swap(x1, x2);
+				MyCoolDrawHorLine(buffer, y, x1, x2, color);
+				continue;
+			}
+
+			if (x1 > x2)
+			{
+				if (x1 > x3) std::swap(x1, x3);
+				MyCoolDrawHorLine(buffer, y, x1, x3, color);
+			}
+			else
+			{
+				if (x2 > x3) std::swap(x2, x3);
+				MyCoolDrawHorLine(buffer, y, x2, x3, color);
+			}
 		}
 	}
 };

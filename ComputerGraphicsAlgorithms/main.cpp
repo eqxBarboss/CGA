@@ -279,6 +279,6 @@ void OnInvalidated()
 
 void OnCreate(HWND hWnd)
 {
-	SetWindowsHookExW(WH_MOUSE_LL, MouseHookProc, nullptr, 0);
+	//SetWindowsHookExW(WH_MOUSE_LL, MouseHookProc, nullptr, 0);
 	SetTimer(hWnd, IDT_TIMER, 15, (TIMERPROC)NULL);
 }
