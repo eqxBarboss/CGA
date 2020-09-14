@@ -65,7 +65,7 @@ private:
 
 		for (int i = 0; i <= steps; i++)
 		{
-			buffer.SetPixel(x, y, RGB(255, 255, 255));
+			buffer.SetPixel(x, y, RGB(255, 0, 0));
 			x += Xinc;
 			y += Yinc;
 		}
@@ -76,7 +76,64 @@ private:
 		memset(buffer.data + y * width + x1, color, sizeof(COLORREF) * (x2 - x1 + 1));
 	}
 
-	static inline void RasterizeTriangle(Buffer& buffer, Polygon& polygon, const std::vector<glm::vec4>& vertices)
+	static inline void RasterizeTriangle(Buffer& buffer, Polygon& polygon, const std::vector<glm::vec4>& vertices) 
+	{
+		const int iv0 = polygon.verticesIndices[0] - 1;
+		const int iv1 = polygon.verticesIndices[1] - 1;
+		const int iv2 = polygon.verticesIndices[2] - 1;
+		const auto& v0 = vertices[iv0];
+		const auto& v1 = vertices[iv1];
+		const auto& v2 = vertices[iv2];
+		int v0x = v0.x;
+		int v0y = v0.y;
+		int v1x = v1.x;
+		int v1y = v1.y;
+		int v2x = v2.x;
+		int v2y = v2.y;
+
+		if (v0x < 0 || v0x >= width || v0y < 0 || v0y >= height ||
+			v1x < 0 || v1x >= width || v1y < 0 || v1y >= height ||
+			v2x < 0 || v2x >= width || v2y < 0 || v2y >= height ||
+			v0.z < 0 || v0.z > 1 ||
+			v1.z < 0 || v1.z > 1 ||
+			v2.z < 0 || v2.z > 1) return;
+
+		if (v0y == v1y && v0y == v2y) return; // don't care about degenerate triangles
+		// sort the vertices, t0, t1, t2 lower-to-upper (bubblesort yay!)
+		if (v0y > v1y)
+		{
+			std::swap(v0x, v1x);
+			std::swap(v0y, v1y);
+		};
+		if (v0y > v2y)
+		{
+			std::swap(v0x, v2x);
+			std::swap(v0y, v2y);
+		};
+		if (v1y > v2y)
+		{
+			std::swap(v1x, v2x);
+			std::swap(v1y, v2y);
+		};
+
+		int total_height = v2y - v0y;
+		for (int i = 0; i < total_height; i++) {
+			bool second_half = i > v1y - v0y || v1y == v0y;
+			int segment_height = second_half ? v2y - v1y : v1y - v0y;
+			float alpha = (float)i / total_height;
+			float beta = (float)(i - (second_half ? v1y - v0y : 0)) / segment_height; // be careful: with above conditions no division by zero here
+			int A = v0x + (v2x - v0x) * alpha;
+			int B = second_half ? v1x + (v2x - v1x) * beta : v0x + (v1x - v0x) * beta;
+			if (A > B) std::swap(A, B);
+			MyCoolDrawHorLine(buffer, v0y + i, A, B, RGB(255, 255, 255));
+		}
+
+		RasterizeLine(buffer, v0, v1);
+		RasterizeLine(buffer, v1, v2);
+		RasterizeLine(buffer, v2, v0);
+	}
+
+	/*static inline void RasterizeTriangle(Buffer& buffer, Polygon& polygon, const std::vector<glm::vec4>& vertices)
 	{
 		const int iv0 = polygon.verticesIndices[0] - 1;
 		const int iv1 = polygon.verticesIndices[1] - 1;
@@ -170,7 +227,7 @@ private:
 				MyCoolDrawHorLine(buffer, y, x2, x3, color);
 			}
 		}
-	}
+	}*/
 };
 
 }
