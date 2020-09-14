@@ -207,6 +207,12 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			game->OnMouseMove(xPos, yPos);
 		}
 		break;
+    case WM_MOUSEWHEEL:
+        {
+            auto zDelta = GET_WHEEL_DELTA_WPARAM(wParam) / WHEEL_DELTA;
+            game->OnWheelScroll(zDelta);
+        }
+        break;
     case WM_PAINT:
         {
             PAINTSTRUCT ps;
@@ -231,25 +237,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         return DefWindowProc(hWnd, message, wParam, lParam);
     }
     return 0;
-}
-
-LRESULT CALLBACK MouseHookProc(int nCode, WPARAM wParam, LPARAM lParam)
-{
-	if (nCode != HC_ACTION)  // Nothing to do :(
-		return CallNextHookEx(NULL, nCode, wParam, lParam);
-
-	MSLLHOOKSTRUCT* info = reinterpret_cast<MSLLHOOKSTRUCT*>(lParam);
-
-
-	switch (wParam)
-	{
-	case WM_MOUSEWHEEL:
-		const auto delta = static_cast<std::make_signed_t<WORD>>(HIWORD(info->mouseData));
-		game->OnWheelScroll(delta / 20);
-		break;
-	}
-
-	return CallNextHookEx(NULL, nCode, wParam, lParam);
 }
 
 // Обработчик сообщений для окна "О программе".
@@ -279,6 +266,5 @@ void OnInvalidated()
 
 void OnCreate(HWND hWnd)
 {
-	//SetWindowsHookExW(WH_MOUSE_LL, MouseHookProc, nullptr, 0);
 	SetTimer(hWnd, IDT_TIMER, 15, (TIMERPROC)NULL);
 }

@@ -149,20 +149,20 @@ void Renderer::DrawPolygons(int id, Buffer &buffer, Obj &renderTarget, int first
 	auto &polygons = renderTarget.polygons;
 	auto &normals = renderTarget.normals;
 
-	//for (int j = first; j < last; j++)
-	//{
-	//	for (int i = 0; i < polygons[j].verticesIndices.size() - 1; i++)
-	//	{
-	//		RasterizeLine(buffer, vertices[polygons[j].verticesIndices[i] - 1], vertices[polygons[j].verticesIndices[i + 1] - 1]);
-	//	}
-
-	//	RasterizeLine(buffer, vertices[polygons[j].verticesIndices[polygons[j].verticesIndices.size() - 1] - 1], vertices[polygons[j].verticesIndices[0] - 1]);
-	//}
-
 	for (int j = first; j < last; j++)
 	{
-		RasterizeTriangle(buffer, polygons[j], vertices);
+		for (int i = 0; i < polygons[j].verticesIndices.size() - 1; i++)
+		{
+			RasterizeLine(buffer, vertices[polygons[j].verticesIndices[i] - 1], vertices[polygons[j].verticesIndices[i + 1] - 1]);
+		}
+
+		RasterizeLine(buffer, vertices[polygons[j].verticesIndices[polygons[j].verticesIndices.size() - 1] - 1], vertices[polygons[j].verticesIndices[0] - 1]);
 	}
+
+	//for (int j = first; j < last; j++)
+	//{
+	//	RasterizeTriangle(buffer, polygons[j], vertices);
+	//}
 
 	FinishThreadWork();
 }
