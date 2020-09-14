@@ -33,6 +33,7 @@ public:
 		return height;
 	}
 
+	// TODO: this is invalid due to bytes order, fix
 	inline void ClearWithColor(COLORREF color)
 	{
 		memset(data, color, totalPixels * sizeof(COLORREF));

@@ -22,6 +22,12 @@ Renderer::Renderer(int aWidth, int aHeight, std::function<void()> aInvalidateCal
 {
 	width = aWidth;
 	height = aHeight;
+	zBuffer = new int[width * height];
+}
+
+Renderer::~Renderer()
+{
+	delete [] zBuffer;
 }
 
 Buffer& Renderer::GetCurrentBuffer()
@@ -56,7 +62,8 @@ void Renderer::Render(std::unique_ptr<Scene> &scene)
 	}
 
 	// Some stuff until waiting
-	backBuffer.ClearWithColor(0);
+	backBuffer.ClearWithColor(RGB(0, 0, 0));
+	ClearZBuffer();
 
 	WaitForThreads();
 
@@ -68,6 +75,7 @@ void Renderer::Render(std::unique_ptr<Scene> &scene)
 
 		DrawPolygons(1
 			, std::ref<Buffer>(backBuffer)
+			, zBuffer
 			, std::ref<Obj>(renderTarget)
 			, 0
 			, renderTarget.polygons.size());
@@ -138,30 +146,21 @@ void Renderer::CalculateVertices(int id, Obj &renderTarget, int first, int last,
 #endif // DISCARD_VERTICES
 
 		vertices[i] = viewPort * vertices[i];
+		vertices[i].z *= zScale;
 	}
 
 	FinishThreadWork();
 }
 
-void Renderer::DrawPolygons(int id, Buffer &buffer, Obj &renderTarget, int first, int last)
+void Renderer::DrawPolygons(int id, Buffer &buffer, int* zBuffer, Obj &renderTarget, int first, int last)
 {
 	auto &vertices = renderTarget.vertices;
 	auto &polygons = renderTarget.polygons;
 	auto &normals = renderTarget.normals;
 
-	//for (int j = first; j < last; j++)
-	//{
-	//	for (int i = 0; i < polygons[j].verticesIndices.size() - 1; i++)
-	//	{
-	//		RasterizeLine(buffer, vertices[polygons[j].verticesIndices[i] - 1], vertices[polygons[j].verticesIndices[i + 1] - 1]);
-	//	}
-
-	//	RasterizeLine(buffer, vertices[polygons[j].verticesIndices[polygons[j].verticesIndices.size() - 1] - 1], vertices[polygons[j].verticesIndices[0] - 1]);
-	//}
-
 	for (int j = first; j < last; j++)
 	{
-		RasterizeTriangle(buffer, polygons[j], vertices);
+		RasterizeTriangle(buffer, zBuffer, polygons[j], vertices);
 	}
 
 	FinishThreadWork();
@@ -185,6 +184,11 @@ void Renderer::FinishThreadWork()
 		lock.unlock();
 		cv.notify_one();
 	}
+}
+
+void Renderer::ClearZBuffer()
+{
+	memset(zBuffer, 1000000, width * height * sizeof(int));
 }
 
 }
