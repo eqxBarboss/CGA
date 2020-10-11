@@ -201,7 +201,7 @@ void Renderer::CalculateLighting(int id
 		glm::vec3 edge1 = vertices[polygon.verticesIndices[1]] - vertices[polygon.verticesIndices[0]];
 		glm::vec3 edge2 = vertices[polygon.verticesIndices[2]] - vertices[polygon.verticesIndices[1]];
 		glm::vec3 normal = glm::cross(edge1, edge2);
-		if (normal.z <= 0)
+		if (normal.z <= -0.05f)
 		{
 			drawPolygon[i] = false;
 			continue;
