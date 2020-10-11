@@ -103,9 +103,9 @@ protected:
 			{
 				return false;
 			}
-			polygon.verticesIndices.push_back(vertexIndex);
-			polygon.textureIndices.push_back(textureCoordIndex);
-			polygon.normalsIndices.push_back(normalIndex);
+			polygon.verticesIndices.push_back(vertexIndex - 1);
+			polygon.textureIndices.push_back(textureCoordIndex - 1);
+			polygon.normalsIndices.push_back(normalIndex - 1);
 		}
 
 		targetObj.polygons.push_back(polygon);

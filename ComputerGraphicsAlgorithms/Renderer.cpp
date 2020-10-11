@@ -18,16 +18,21 @@ Renderer::Renderer(int aWidth, int aHeight, std::function<void()> aInvalidateCal
 	threadCount(std::thread::hardware_concurrency()),
 	threadPool(std::thread::hardware_concurrency()),
 	buffer(aWidth, aHeight, 0),
-	backBuffer(aWidth, aHeight, 0)
+	backBuffer(aWidth, aHeight, 0),
+	lightSource(glm::vec3(0.0f, 0.0f, 2.5f), RGB(255, 255, 255))
 {
 	width = aWidth;
 	height = aHeight;
-	zBuffer = new int[width * height];
+	zBuffer = new float[width * height];
+	zBufferInitial = new float[width * height];
+
+	for (int i = 0; i < width * height; i++) zBufferInitial[i] = (float)1;
 }
 
 Renderer::~Renderer()
 {
 	delete [] zBuffer;
+	delete [] zBufferInitial;
 }
 
 Buffer& Renderer::GetCurrentBuffer()
@@ -37,69 +42,108 @@ Buffer& Renderer::GetCurrentBuffer()
 
 void Renderer::Render(std::unique_ptr<Scene> &scene)
 {
-	Obj renderTarget = scene->obj;
+	renderTarget = scene->obj;
+	cameraSpaceVertices = renderTarget.vertices;
+	drawPolygon.resize(renderTarget.polygons.size());
 	Camera &camera = scene->camera;
+	LightSource lightSource = this->lightSource;
 
 	const auto model = glm::mat4(1.0f);
 	const auto view = camera.GetViewMatrix();
 	const auto projection = GetPerspectiveProjectionMatrix(width, height, 0.1f, 1000.0f, camera.FOV);
 	const auto viewPort = GetViewPortMatrix(width, height);
 
-	const auto pvm = projection * view * model;
+	const auto vm = view * model;
+	const auto pvm = projection * vm;
+	const glm::mat3 TIvm = glm::transpose(glm::inverse(vm));
 
-	int step = (std::max)(renderTarget.vertices.size() / threadCount, renderTarget.vertices.size());
-	workingThreads = step == renderTarget.vertices.size() ? 1 : threadCount;
-	int tasksToStart = workingThreads;
+	lightSource.position = vm * glm::vec4(lightSource.position, 1.0f);
 
-	for (int i = 0; i < tasksToStart; i++)
+	int step;
+	int tasksToStart;
+
+	// Vertices
 	{
-		threadPool.push(CalculateVertices
-						, std::ref<Obj>(renderTarget)
-						, i * step
-						, i == (tasksToStart - 1) ? renderTarget.vertices.size() : (i + 1) * step
-						, std::ref<const glm::mat4>(pvm)
-						, std::ref<const glm::mat4>(viewPort));
+		step = (std::max)(renderTarget.vertices.size() / threadCount, renderTarget.vertices.size());
+		workingThreads = step == renderTarget.vertices.size() ? 1 : threadCount;
+		tasksToStart = workingThreads;
+
+		for (int i = 0; i < tasksToStart; i++)
+		{
+			threadPool.push(CalculateVertices
+				, std::ref<Obj>(renderTarget)
+				, std::ref<std::vector<glm::vec4>>(cameraSpaceVertices)
+				, i * step
+				, i == (tasksToStart - 1) ? renderTarget.vertices.size() : (i + 1) * step
+				, std::ref<const glm::mat4>(pvm)
+				, std::ref<const glm::mat4>(vm)
+				, std::ref<const glm::mat4>(viewPort));
+		}
+
+		// Some stuff until waiting
+		backBuffer.ClearWithColor(RGB(0, 0, 0));
+		ClearZBuffer();
+
+		WaitForThreads();
 	}
 
-	// Some stuff until waiting
-	backBuffer.ClearWithColor(RGB(0, 0, 0));
-	ClearZBuffer();
+	// Normals
+	{
+		step = (std::max)(renderTarget.normals.size() / threadCount, renderTarget.normals.size());
+		workingThreads = step == renderTarget.normals.size() ? 1 : threadCount;
+		tasksToStart = workingThreads;
 
-	WaitForThreads();
+		for (int i = 0; i < tasksToStart; i++)
+		{
+			threadPool.push(CalculateNormals
+				, std::ref<Obj>(renderTarget)
+				, i * step
+				, i == (tasksToStart - 1) ? renderTarget.normals.size() : (i + 1) * step
+				, std::ref<const glm::mat3>(TIvm));
+		}
 
-	if (renderTarget.polygons.size() != 0)
+		WaitForThreads();
+	}
+
+	// Calculate lighting for polygons and discard by facing
 	{
 		step = (std::max)(renderTarget.polygons.size() / threadCount, renderTarget.polygons.size());
 		workingThreads = step == renderTarget.polygons.size() ? 1 : threadCount;
 		tasksToStart = workingThreads;
 
-		DrawPolygons(1
-			, std::ref<Buffer>(backBuffer)
-			, zBuffer
-			, std::ref<Obj>(renderTarget)
-			, 0
-			, renderTarget.polygons.size());
-
-		/*for (int i = 0; i < tasksToStart; i++)
+		for (int i = 0; i < tasksToStart; i++)
 		{
-			threadPool.push(DrawPolygons
-				, std::ref<Buffer>(backBuffer)
+			threadPool.push(CalculateLighting
 				, std::ref<Obj>(renderTarget)
+				, std::ref<std::vector<glm::vec4>>(cameraSpaceVertices)
+				, std::ref<std::vector<bool>>(drawPolygon)
 				, i * step
-				, i == (tasksToStart - 1) ? renderTarget.polygons.size() : (i + 1) * step);
-		}*/
+				, i == (tasksToStart - 1) ? renderTarget.polygons.size() : (i + 1) * step
+				, lightSource);
+		}
 
 		WaitForThreads();
 	}
 
-	auto temp = buffer.data;
-	buffer.data = backBuffer.data;
-	backBuffer.data = temp;
+	DrawPolygons(std::ref<Buffer>(backBuffer)
+		, zBuffer
+		, std::ref<Obj>(renderTarget)
+		, 0
+		, renderTarget.polygons.size());
+
+	std::swap(buffer.data, backBuffer.data);
 
 	aInvalidateCallback();
 }
 
-void Renderer::CalculateVertices(int id, Obj &renderTarget, int first, int last, const glm::mat4 &pvm, const glm::mat4 &viewPort)
+void Renderer::CalculateVertices(int id
+	, Obj &renderTarget
+	, std::vector<glm::vec4>& cameraSpaceVertices
+	, int first
+	, int last
+	, const glm::mat4 &pvm
+	, const glm::mat4& vm
+	, const glm::mat4 &viewPort)
 {
 	auto &vertices = renderTarget.vertices;
 
@@ -112,58 +156,89 @@ void Renderer::CalculateVertices(int id, Obj &renderTarget, int first, int last,
 		vertices[i].z = vertices[i].z / vertices[i].w;
 		vertices[i].w = 1.0f;
 
-#ifdef DISCARD_VERTICES
-
-		if (vertices[i].x < -1 || vertices[i].x > 1
-			|| vertices[i].y < -1 || vertices[i].y > 1
-			|| vertices[i].z < 0 || vertices[i].z > 1)
-		{
-			std::vector<int> polygonsToDelete;
-
-			for (int j = 0; j < renderTarget.polygons.size(); j++)
-			{
-				for (const auto vertexIndex : renderTarget.polygons[j].verticesIndices)
-				{
-					if ((vertexIndex - 1) == i)
-					{
-						polygonsToDelete.push_back(j);
-					}
-				}
-			}
-
-			std::sort(polygonsToDelete.begin(), polygonsToDelete.end(), std::greater<int>());
-
-			{
-				std::lock_guard<std::mutex> lock(mutex);
-
-				for (const auto polygonToDelete : polygonsToDelete)
-				{
-					renderTarget.polygons.erase(renderTarget.polygons.begin() + polygonToDelete);
-				}
-			}
-		}
-
-#endif // DISCARD_VERTICES
-
 		vertices[i] = viewPort * vertices[i];
-		vertices[i].z *= zScale;
+	}
+
+	for (int i = first; i < last; i++)
+	{
+		cameraSpaceVertices[i] = vm * cameraSpaceVertices[i];
 	}
 
 	FinishThreadWork();
 }
 
-void Renderer::DrawPolygons(int id, Buffer &buffer, int* zBuffer, Obj &renderTarget, int first, int last)
+void Renderer::CalculateNormals(int id
+	, Obj& renderTarget
+	, int first
+	, int last
+	, const glm::mat3& TIvm)
 {
-	auto &vertices = renderTarget.vertices;
-	auto &polygons = renderTarget.polygons;
-	auto &normals = renderTarget.normals;
+	auto& normals = renderTarget.normals;
 
-	for (int j = first; j < last; j++)
+	for (int i = first; i < last; i++)
 	{
-		RasterizeTriangle(buffer, zBuffer, polygons[j], vertices);
+		normals[i] = glm::normalize(TIvm * normals[i]);
 	}
 
 	FinishThreadWork();
+}
+
+void Renderer::CalculateLighting(int id
+	, Obj& renderTarget
+	, const std::vector<glm::vec4>& cameraSpaceVertices
+	, std::vector<bool>& drawPolygon
+	, int first
+	, int last
+	, const LightSource& lightSource)
+{
+	auto& polygons = renderTarget.polygons;
+	const auto& vertices = cameraSpaceVertices;
+	const auto& normals = renderTarget.normals;
+
+	for (int i = first; i < last; i++)
+	{
+		auto& polygon = polygons[i];
+		glm::vec3 edge1 = vertices[polygon.verticesIndices[1]] - vertices[polygon.verticesIndices[0]];
+		glm::vec3 edge2 = vertices[polygon.verticesIndices[2]] - vertices[polygon.verticesIndices[1]];
+		glm::vec3 normal = glm::cross(edge1, edge2);
+		if (normal.z <= 0)
+		{
+			drawPolygon[i] = false;
+			continue;
+		}
+		else
+		{
+			int R = 0;
+			int G = 0;
+			int B = 0;
+
+			drawPolygon[i] = true;
+			for (int j = 0; j < 3; j++)
+			{
+				glm::vec3 lightDir = glm::normalize(lightSource.position - (glm::vec3)vertices[polygon.verticesIndices[j]]);
+				const auto dot = glm::dot(lightDir, normals[polygon.normalsIndices[j]]);
+				if (dot < 0) continue;
+				R += GetRValue(lightSource.color) * dot;
+				G += GetGValue(lightSource.color) * dot;
+				B += GetBValue(lightSource.color) * dot;
+			}
+
+			polygon.color = RGB(R / 3, G / 3, B / 3);
+		}
+	}
+
+	FinishThreadWork();
+}
+
+void Renderer::DrawPolygons(Buffer &buffer, float* zBuffer, Obj &renderTarget, int first, int last)
+{
+	for (int j = first; j < last; j++)
+	{
+		if (drawPolygon[j])
+		{
+			RasterizeTriangle(buffer, zBuffer, renderTarget, j);
+		}
+	}
 }
 
 void Renderer::WaitForThreads()
@@ -188,7 +263,7 @@ void Renderer::FinishThreadWork()
 
 void Renderer::ClearZBuffer()
 {
-	memset(zBuffer, 1000000, width * height * sizeof(int));
+	memcpy(zBuffer, zBufferInitial, width * height * sizeof(float));
 }
 
 }

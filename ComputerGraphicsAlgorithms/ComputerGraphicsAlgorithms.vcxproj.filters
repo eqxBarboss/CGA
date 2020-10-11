@@ -60,6 +60,9 @@
     <ClInclude Include="Buffer.h">
       <Filter>Исходные файлы\Core</Filter>
     </ClInclude>
+    <ClInclude Include="LightSource.h">
+      <Filter>Исходные файлы\Core</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">

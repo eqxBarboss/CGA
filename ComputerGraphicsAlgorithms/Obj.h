@@ -2,6 +2,7 @@
 
 #include <glm/glm.hpp>
 #include <vector>
+#include <windows.h>
 
 namespace cga 
 {
@@ -12,6 +13,7 @@ public:
 	std::vector<int> verticesIndices;
 	std::vector<int> textureIndices;
 	std::vector<int> normalsIndices;
+	COLORREF color;
 };
 
 class Obj
