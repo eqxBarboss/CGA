@@ -19,7 +19,7 @@ Renderer::Renderer(int aWidth, int aHeight, std::function<void()> aInvalidateCal
 	threadPool(std::thread::hardware_concurrency()),
 	buffer(aWidth, aHeight, 0),
 	backBuffer(aWidth, aHeight, 0),
-	lightSource(glm::vec3(0.0f, 0.0f, 2.5f), RGB(255, 255, 255))
+	lightSource(glm::vec3(0.0f, 0.0f, 2.5f), RGB(0, 255, 0))
 {
 	width = aWidth;
 	height = aHeight;
@@ -81,7 +81,7 @@ void Renderer::Render(std::unique_ptr<Scene> &scene)
 		}
 
 		// Some stuff until waiting
-		backBuffer.ClearWithColor(RGB(0, 0, 0));
+		backBuffer.ClearWithColor(RGB(255, 255, 255));
 		ClearZBuffer();
 
 		WaitForThreads();
@@ -198,15 +198,15 @@ void Renderer::CalculateLighting(int id
 	for (int i = first; i < last; i++)
 	{
 		auto& polygon = polygons[i];
-		glm::vec3 edge1 = vertices[polygon.verticesIndices[1]] - vertices[polygon.verticesIndices[0]];
+		/*glm::vec3 edge1 = vertices[polygon.verticesIndices[1]] - vertices[polygon.verticesIndices[0]];
 		glm::vec3 edge2 = vertices[polygon.verticesIndices[2]] - vertices[polygon.verticesIndices[1]];
-		glm::vec3 normal = glm::cross(edge1, edge2);
-		if (normal.z <= -0.05f)
+		glm::vec3 normal = glm::normalize(glm::cross(edge1, edge2));
+		if (normal.z < -0.0f)
 		{
 			drawPolygon[i] = false;
 			continue;
 		}
-		else
+		else*/
 		{
 			int R = 0;
 			int G = 0;
@@ -234,7 +234,7 @@ void Renderer::DrawPolygons(Buffer &buffer, float* zBuffer, Obj &renderTarget, i
 {
 	for (int j = first; j < last; j++)
 	{
-		if (drawPolygon[j])
+		//if (drawPolygon[j])
 		{
 			RasterizeTriangle(buffer, zBuffer, renderTarget, j);
 		}

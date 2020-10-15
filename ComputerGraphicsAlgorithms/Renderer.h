@@ -149,10 +149,13 @@ private:
 		int v2y = v2.y;
 		float v2z = v2.z;
 
-		if (v0x < 0 || v0x >= width || v0y < 0 || v0y >= height ||
-			v1x < 0 || v1x >= width || v1y < 0 || v1y >= height ||
-			v2x < 0 || v2x >= width || v2y < 0 || v2y >= height ||
-			v0z < 0 || v0z > 1 ||
+		auto m = (v1x - v0x) * (v2y - v1y) - (v2x - v1x) * (v1y - v0y);
+		if (m >= 0) return;
+
+		//if (v0x < 0 || v0x >= width || v0y < 0 || v0y >= height ||
+		//	v1x < 0 || v1x >= width || v1y < 0 || v1y >= height ||
+		//	v2x < 0 || v2x >= width || v2y < 0 || v2y >= height ||
+		if (v0z < 0 || v0z > 1 ||
 			v1z < 0 || v1z > 1 ||
 			v2z < 0 || v2z > 1) return;
 
@@ -194,6 +197,12 @@ private:
 				std::swap(x1, x2);
 				std::swap(z1, z2);
 			}
+			if (x1 < 0) x1 = 0;
+			if (x2 < 0) x2 = 0;
+			if (x1 >= width) x1 = width - 1;
+			if (x2 >= width) x2 = width - 1;
+			if (((x1 == x2) && (x1 == 0)) || ((x1 == x2) && (x1 == width - 1))) continue;
+			if (((v0y + i) < 0) || ((v0y + i) >= height)) continue;
 			MyCoolDrawHorLine(buffer, zBuffer, v0y + i, x1, x2, z1, z2, polygon.color);
 		}
 

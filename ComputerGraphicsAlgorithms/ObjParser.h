@@ -108,7 +108,20 @@ protected:
 			polygon.normalsIndices.push_back(normalIndex - 1);
 		}
 
-		targetObj.polygons.push_back(polygon);
+		for (int i = 0; i < polygon.verticesIndices.size(); i += 3)
+		{
+			Polygon p;
+			int start = (i + 2 < polygon.verticesIndices.size()) ? i : i - 2;
+			for (int j = start; j <= start + 2; j++)
+			{
+				p.verticesIndices.push_back(polygon.verticesIndices[j]);
+				p.textureIndices.push_back(polygon.textureIndices[j]);
+				p.normalsIndices.push_back(polygon.normalsIndices[j]);
+			}
+			targetObj.polygons.push_back(p);
+		}
+
+		//targetObj.polygons.push_back(polygon);
 			
 		return true;
 	}
