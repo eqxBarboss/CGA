@@ -19,7 +19,7 @@ Renderer::Renderer(int aWidth, int aHeight, std::function<void()> aInvalidateCal
 	threadPool(std::thread::hardware_concurrency()),
 	buffer(aWidth, aHeight, 0),
 	backBuffer(aWidth, aHeight, 0),
-	lightSource(glm::vec3(0.0f, 0.0f, 2.5f), RGB(0, 255, 0))
+	lightSource(glm::vec3(1.0f, 2.5f, 1.5f), RGB(255, 255, 255))
 {
 	width = aWidth;
 	height = aHeight;
@@ -44,7 +44,6 @@ void Renderer::Render(std::unique_ptr<Scene> &scene)
 {
 	renderTarget = scene->obj;
 	cameraSpaceVertices = renderTarget.vertices;
-	drawPolygon.resize(renderTarget.polygons.size());
 	Camera &camera = scene->camera;
 	LightSource lightSource = this->lightSource;
 
@@ -81,7 +80,7 @@ void Renderer::Render(std::unique_ptr<Scene> &scene)
 		}
 
 		// Some stuff until waiting
-		backBuffer.ClearWithColor(RGB(255, 255, 255));
+		backBuffer.ClearWithColor(RGB(0, 0, 0));
 		ClearZBuffer();
 
 		WaitForThreads();
@@ -106,28 +105,29 @@ void Renderer::Render(std::unique_ptr<Scene> &scene)
 	}
 
 	// Calculate lighting for polygons and discard by facing
-	{
-		step = (std::max)(renderTarget.polygons.size() / threadCount, renderTarget.polygons.size());
-		workingThreads = step == renderTarget.polygons.size() ? 1 : threadCount;
-		tasksToStart = workingThreads;
+	//{
+	//	step = (std::max)(renderTarget.polygons.size() / threadCount, renderTarget.polygons.size());
+	//	workingThreads = step == renderTarget.polygons.size() ? 1 : threadCount;
+	//	tasksToStart = workingThreads;
 
-		for (int i = 0; i < tasksToStart; i++)
-		{
-			threadPool.push(CalculateLighting
-				, std::ref<Obj>(renderTarget)
-				, std::ref<std::vector<glm::vec4>>(cameraSpaceVertices)
-				, std::ref<std::vector<bool>>(drawPolygon)
-				, i * step
-				, i == (tasksToStart - 1) ? renderTarget.polygons.size() : (i + 1) * step
-				, lightSource);
-		}
+	//	for (int i = 0; i < tasksToStart; i++)
+	//	{
+	//		threadPool.push(CalculateLighting
+	//			, std::ref<Obj>(renderTarget)
+	//			, std::ref<std::vector<glm::vec4>>(cameraSpaceVertices)
+	//			, i * step
+	//			, i == (tasksToStart - 1) ? renderTarget.polygons.size() : (i + 1) * step
+	//			, lightSource);
+	//	}
 
-		WaitForThreads();
-	}
+	//	WaitForThreads();
+	//}
 
 	DrawPolygons(std::ref<Buffer>(backBuffer)
 		, zBuffer
 		, std::ref<Obj>(renderTarget)
+		, std::ref<std::vector<glm::vec4>>(cameraSpaceVertices)
+		, lightSource
 		, 0
 		, renderTarget.polygons.size());
 
@@ -186,7 +186,6 @@ void Renderer::CalculateNormals(int id
 void Renderer::CalculateLighting(int id
 	, Obj& renderTarget
 	, const std::vector<glm::vec4>& cameraSpaceVertices
-	, std::vector<bool>& drawPolygon
 	, int first
 	, int last
 	, const LightSource& lightSource)
@@ -198,21 +197,11 @@ void Renderer::CalculateLighting(int id
 	for (int i = first; i < last; i++)
 	{
 		auto& polygon = polygons[i];
-		/*glm::vec3 edge1 = vertices[polygon.verticesIndices[1]] - vertices[polygon.verticesIndices[0]];
-		glm::vec3 edge2 = vertices[polygon.verticesIndices[2]] - vertices[polygon.verticesIndices[1]];
-		glm::vec3 normal = glm::normalize(glm::cross(edge1, edge2));
-		if (normal.z < -0.0f)
-		{
-			drawPolygon[i] = false;
-			continue;
-		}
-		else*/
 		{
 			int R = 0;
 			int G = 0;
 			int B = 0;
 
-			drawPolygon[i] = true;
 			for (int j = 0; j < 3; j++)
 			{
 				glm::vec3 lightDir = glm::normalize(lightSource.position - (glm::vec3)vertices[polygon.verticesIndices[j]]);
@@ -223,21 +212,18 @@ void Renderer::CalculateLighting(int id
 				B += GetBValue(lightSource.color) * dot;
 			}
 
-			polygon.color = RGB(R / 3, G / 3, B / 3);
+			//polygon.color = RGB(R / 3, G / 3, B / 3);
 		}
 	}
 
 	FinishThreadWork();
 }
 
-void Renderer::DrawPolygons(Buffer &buffer, float* zBuffer, Obj &renderTarget, int first, int last)
+void Renderer::DrawPolygons(Buffer& buffer, float* zBuffer, Obj& renderTarget, const std::vector<glm::vec4>& cameraSpaceVertices, const LightSource& lightSource, int first, int last)
 {
 	for (int j = first; j < last; j++)
 	{
-		//if (drawPolygon[j])
-		{
-			RasterizeTriangle(buffer, zBuffer, renderTarget, j);
-		}
+		RasterizeTriangle(buffer, zBuffer, renderTarget, cameraSpaceVertices, lightSource, j);
 	}
 }
 

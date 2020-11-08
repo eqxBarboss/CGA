@@ -42,7 +42,6 @@ private:
 	Obj renderTarget;
 	LightSource lightSource;
 	std::vector<glm::vec4> cameraSpaceVertices;
-	std::vector<bool> drawPolygon;
 	Buffer buffer, backBuffer;
 	float* zBuffer;
 	float* zBufferInitial;
@@ -67,11 +66,10 @@ private:
 	static void CalculateLighting(int id
 		, Obj& renderTarget
 		, const std::vector<glm::vec4>& cameraSpaceVertices
-		, std::vector<bool>& drawPolygon
 		, int first
 		, int last
 		, const LightSource& lightSource);
-	void DrawPolygons(Buffer &buffer, float* zBuffer, Obj &renderTarget, int first, int last);
+	void DrawPolygons(Buffer &buffer, float* zBuffer, Obj &renderTarget, const std::vector<glm::vec4>& cameraSpaceVertices, const LightSource& lightSource, int first, int last);
 	static void WaitForThreads();
 	static void FinishThreadWork();
 
@@ -125,14 +123,16 @@ private:
 		}
 	}
 
-	static inline void RasterizeTriangle(Buffer& buffer, float* zBuffer, Obj& renderTarget, int polygonIndex)
+	static inline void RasterizeTriangle(Buffer& buffer, float* zBuffer, Obj& renderTarget, const std::vector<glm::vec4>& cameraSpaceVertices, const LightSource& lightSource, int polygonIndex)
 	{
 		const auto& vertices = renderTarget.vertices;
 		const auto& polygon = renderTarget.polygons[polygonIndex];
-		const auto& normals = renderTarget.normals;
+		auto& normals = renderTarget.normals;
 
-		const COLORREF inner = RGB(0xff, 0xbf, 0x00);
-		const COLORREF outer = RGB(0, 0, 255);
+		const glm::vec4* a = &cameraSpaceVertices[polygon.verticesIndices[0]];
+		const glm::vec4* b = &cameraSpaceVertices[polygon.verticesIndices[1]];
+		const glm::vec4* c = &cameraSpaceVertices[polygon.verticesIndices[2]];
+
 		const int iv0 = polygon.verticesIndices[0];
 		const int iv1 = polygon.verticesIndices[1];
 		const int iv2 = polygon.verticesIndices[2];
@@ -149,12 +149,13 @@ private:
 		int v2y = v2.y;
 		float v2z = v2.z;
 
+		glm::vec3* nA = &normals[polygon.normalsIndices[0]];
+		glm::vec3* nB = &normals[polygon.normalsIndices[1]];
+		glm::vec3* nC = &normals[polygon.normalsIndices[2]];
+
 		auto m = (v1x - v0x) * (v2y - v1y) - (v2x - v1x) * (v1y - v0y);
 		if (m >= 0) return;
 
-		//if (v0x < 0 || v0x >= width || v0y < 0 || v0y >= height ||
-		//	v1x < 0 || v1x >= width || v1y < 0 || v1y >= height ||
-		//	v2x < 0 || v2x >= width || v2y < 0 || v2y >= height ||
 		if (v0z < 0 || v0z > 1 ||
 			v1z < 0 || v1z > 1 ||
 			v2z < 0 || v2z > 1) return;
@@ -167,20 +168,46 @@ private:
 				std::swap(v0x, v1x);
 				std::swap(v0y, v1y);
 				std::swap(v0z, v1z);
+				auto temp = nA;
+				nA = nB;
+				nB = temp;
+				auto temp1 = a;
+				a = b;
+				b = temp1;
 			};
 			if (v0y > v2y)
 			{
 				std::swap(v0x, v2x);
 				std::swap(v0y, v2y);
 				std::swap(v0z, v2z);
+				auto temp = nA;
+				nA = nC;
+				nC = temp;
+				auto temp1 = a;
+				a = c;
+				c = temp1;
 			};
 			if (v1y > v2y)
 			{
 				std::swap(v1x, v2x);
 				std::swap(v1y, v2y);
 				std::swap(v1z, v2z);
+				auto temp = nB;
+				nB = nC;
+				nC = temp;
+				auto temp1 = b;
+				b = c;
+				c = temp1;
 			};
 		}
+
+		// v0 = A
+		// v1 = B
+		// v2 = C
+		const int ABx = v1x - v0x;
+		const int ACx = v2x - v0x;
+		const int ABy = v1y - v0y;
+		const int ACy = v2y - v0y;
 
 		int total_height = v2y - v0y;
 		for (int i = 0; i < total_height; i++) {
@@ -203,12 +230,69 @@ private:
 			if (x2 >= width) x2 = width - 1;
 			if (((x1 == x2) && (x1 == 0)) || ((x1 == x2) && (x1 == width - 1))) continue;
 			if (((v0y + i) < 0) || ((v0y + i) >= height)) continue;
-			MyCoolDrawHorLine(buffer, zBuffer, v0y + i, x1, x2, z1, z2, polygon.color);
-		}
 
-		//RasterizeLine(buffer, zBuffer, v0, v1, outer);
-		//RasterizeLine(buffer, zBuffer, v1, v2, outer);
-		//RasterizeLine(buffer, zBuffer, v2, v0, outer);
+			const int y = v0y + i;
+			const int yMulWidth = y * width;
+			const int PAy = v0y - y;
+			auto Zinc = (z2 - z1) / (float)(x2 - x1 + 1);
+			float z = z1;
+
+			COLORREF color;
+
+			for (int x = x1; x != x2; x++)
+			{
+				if (zBuffer[yMulWidth + x] > z)
+				{
+					zBuffer[yMulWidth + x] = z;
+
+					{					
+						glm::vec3 crs = glm::cross(glm::vec3(ACx, ABx, v0x - x), glm::vec3(ACy, ABy, PAy));
+						glm::vec3 barycentric(1.0f - (crs.x + crs.y) / crs.z, crs.y / crs.z, crs.x / crs.z);
+						glm::vec3 normal = glm::normalize(barycentric.x * *nA + barycentric.y * *nB + barycentric.z * *nC);
+						glm::vec4 v = barycentric.x * *a + barycentric.y * *b + barycentric.z * *c;
+						color = GetPhongColor(v, normal, lightSource);
+					}
+
+					buffer.SetPixel(x, y, color);
+				}
+				z += Zinc;
+			}
+		}
+	}
+
+	static inline COLORREF GetPhongColor(const glm::vec4& v, const glm::vec3& normal, const LightSource& lightSource)
+	{
+		constexpr glm::vec3 A = glm::vec3(0.05375f, 0.05f, 0.06625f);
+		constexpr glm::vec3 D = glm::vec3(0.18275f, 0.17f, 0.22525f);
+		constexpr glm::vec3 S = glm::vec3(0.332741f, 0.328634f, 0.346435f);
+		constexpr float shininess = 0.3f;
+
+		int r, g, b;
+		
+		r = GetRValue(lightSource.color) * A.x;
+		g = GetGValue(lightSource.color) * A.y;
+		b = GetBValue(lightSource.color) * A.z;
+
+		glm::vec3 lightDir = glm::normalize(lightSource.position - (glm::vec3)v);
+		const auto dot = std::max(glm::dot(lightDir, normal), 0.0f);
+
+		r += GetRValue(lightSource.color) * (dot * D.x);
+		g += GetGValue(lightSource.color) * (dot * D.y);
+		b += GetBValue(lightSource.color) * (dot * D.z);
+
+		glm::vec3 viewDir = glm::normalize((glm::vec3)-v);
+		glm::vec3 reflectDir = glm::reflect(-lightDir, normal);
+		float spec = std::pow(std::max(glm::dot(viewDir, reflectDir), 0.0f), shininess * 128);
+
+		r += GetRValue(lightSource.color) * spec * S.x;
+		g += GetGValue(lightSource.color) * spec * S.y;
+		b += GetBValue(lightSource.color) * spec * S.z;
+
+		r = std::min(r, 255);
+		g = std::min(g, 255);
+		b = std::min(b, 255);
+
+		return RGB(b, g, r);
 	}
 };
 
