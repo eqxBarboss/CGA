@@ -5,6 +5,8 @@
 
 #include "Math.h"
 
+#include "lodepng.h"
+
 namespace cga
 {
 
@@ -13,18 +15,42 @@ int Renderer::workingThreads;
 std::mutex Renderer::mutex;
 std::condition_variable Renderer::cv;
 
+std::vector<unsigned char> Renderer::diffuseMap;
+unsigned Renderer::diffuseMapWidth, Renderer::diffuseMapHeight;
+
+std::vector<unsigned char> Renderer::specularMap;
+unsigned Renderer::specularMapWidth, Renderer::specularMapHeight;
+
+std::vector<unsigned char> Renderer::normalMapLoaded;
+std::vector<glm::vec3> Renderer::normalMap;
+unsigned Renderer::normalMapWidth, Renderer::normalMapHeight;
+std::vector<glm::vec3> Renderer::normalMapTransformed;
+
 Renderer::Renderer(int aWidth, int aHeight, std::function<void()> aInvalidateCallback)
 	: aInvalidateCallback(aInvalidateCallback),
 	threadCount(std::thread::hardware_concurrency()),
 	threadPool(std::thread::hardware_concurrency()),
 	buffer(aWidth, aHeight, 0),
 	backBuffer(aWidth, aHeight, 0),
-	lightSource(glm::vec3(1.0f, 2.5f, 1.5f), RGB(255, 255, 255))
+	lightSource(glm::vec3(1.0f, 2.5f, 1.5f), glm::vec3(1, 1, 1))
 {
 	width = aWidth;
 	height = aHeight;
 	zBuffer = new float[width * height];
 	zBufferInitial = new float[width * height];
+
+	lodepng::decode(diffuseMap, diffuseMapWidth, diffuseMapHeight, "C:\\Users\\eqxba\\Desktop\\АКГ\\Материалы\\Head\\Albedo Map.png");
+	lodepng::decode(specularMap, specularMapWidth, specularMapHeight, "C:\\Users\\eqxba\\Desktop\\АКГ\\Материалы\\Head\\Specular Map.png");
+	lodepng::decode(normalMapLoaded, normalMapWidth, normalMapHeight, "C:\\Users\\eqxba\\Desktop\\АКГ\\Материалы\\Head\\Normal Map.png");
+
+	for (int i = 0; i < normalMapLoaded.size(); i += 4) 
+		normalMap.push_back(glm::vec3(
+		  normalMapLoaded[i] / 255.0f * 2 - 1
+		, normalMapLoaded[i + 1] / 255.0f * 2 - 1
+		, normalMapLoaded[i + 2] / 255.0f * 2 - 1
+	));
+
+	for (int i = 0; i < normalMap.size(); i++) normalMapTransformed.push_back(normalMap[i]);
 
 	for (int i = 0; i < width * height; i++) zBufferInitial[i] = (float)1;
 }
@@ -98,6 +124,24 @@ void Renderer::Render(std::unique_ptr<Scene> &scene)
 				, std::ref<Obj>(renderTarget)
 				, i * step
 				, i == (tasksToStart - 1) ? renderTarget.normals.size() : (i + 1) * step
+				, std::ref<const glm::mat3>(TIvm));
+		}
+
+		WaitForThreads();
+	}
+
+	// Normals
+	{
+		step = (std::max)(normalMap.size() / threadCount, normalMap.size());
+		workingThreads = step == normalMap.size() ? 1 : threadCount;
+		tasksToStart = workingThreads;
+
+		for (int i = 0; i < tasksToStart; i++)
+		{
+			threadPool.push(CalculateNormalsMap
+				, std::ref<Obj>(renderTarget)
+				, i * step
+				, i == (tasksToStart - 1) ? normalMap.size() : (i + 1) * step
 				, std::ref<const glm::mat3>(TIvm));
 		}
 
@@ -183,44 +227,69 @@ void Renderer::CalculateNormals(int id
 	FinishThreadWork();
 }
 
-void Renderer::CalculateLighting(int id
+void Renderer::CalculateNormalsMap(int id
 	, Obj& renderTarget
-	, const std::vector<glm::vec4>& cameraSpaceVertices
 	, int first
 	, int last
-	, const LightSource& lightSource)
+	, const glm::mat3& TIvm)
 {
-	auto& polygons = renderTarget.polygons;
-	const auto& vertices = cameraSpaceVertices;
-	const auto& normals = renderTarget.normals;
-
 	for (int i = first; i < last; i++)
 	{
-		auto& polygon = polygons[i];
-		{
-			int R = 0;
-			int G = 0;
-			int B = 0;
-
-			for (int j = 0; j < 3; j++)
-			{
-				glm::vec3 lightDir = glm::normalize(lightSource.position - (glm::vec3)vertices[polygon.verticesIndices[j]]);
-				const auto dot = glm::dot(lightDir, normals[polygon.normalsIndices[j]]);
-				if (dot < 0) continue;
-				R += GetRValue(lightSource.color) * dot;
-				G += GetGValue(lightSource.color) * dot;
-				B += GetBValue(lightSource.color) * dot;
-			}
-
-			//polygon.color = RGB(R / 3, G / 3, B / 3);
-		}
+		normalMapTransformed[i] = glm::normalize(TIvm * normalMap[i]);
 	}
 
 	FinishThreadWork();
 }
 
+//void Renderer::CalculateLighting(int id
+//	, Obj& renderTarget
+//	, const std::vector<glm::vec4>& cameraSpaceVertices
+//	, int first
+//	, int last
+//	, const LightSource& lightSource)
+//{
+//	auto& polygons = renderTarget.polygons;
+//	const auto& vertices = cameraSpaceVertices;
+//	const auto& normals = renderTarget.normals;
+//
+//	for (int i = first; i < last; i++)
+//	{
+//		auto& polygon = polygons[i];
+//		{
+//			int R = 0;
+//			int G = 0;
+//			int B = 0;
+//
+//			for (int j = 0; j < 3; j++)
+//			{
+//				glm::vec3 lightDir = glm::normalize(lightSource.position - (glm::vec3)vertices[polygon.verticesIndices[j]]);
+//				const auto dot = glm::dot(lightDir, normals[polygon.normalsIndices[j]]);
+//				if (dot < 0) continue;
+//				R += GetRValue(lightSource.color) * dot;
+//				G += GetGValue(lightSource.color) * dot;
+//				B += GetBValue(lightSource.color) * dot;
+//			}
+//
+//			//polygon.color = RGB(R / 3, G / 3, B / 3);
+//		}
+//	}
+//
+//	FinishThreadWork();
+//}
+
 void Renderer::DrawPolygons(Buffer& buffer, float* zBuffer, Obj& renderTarget, const std::vector<glm::vec4>& cameraSpaceVertices, const LightSource& lightSource, int first, int last)
 {
+	//int width = std::min((int)diffuseMapWidth, Renderer::width);
+	//int height = std::min((int)diffuseMapHeight, Renderer::height);
+	//for (int i = 0; i < width; i++)
+	//	for (int j = 0; j < height; j++)
+	//	{
+	//		int textelNumber = (j * diffuseMapWidth + i) * 4;
+	//		buffer.SetPixel(i, j, RGB(diffuseMap[textelNumber + 2], diffuseMap[textelNumber + 1], diffuseMap[textelNumber + 0]));
+	//	}
+
+	//return;
+
 	for (int j = first; j < last; j++)
 	{
 		RasterizeTriangle(buffer, zBuffer, renderTarget, cameraSpaceVertices, lightSource, j);

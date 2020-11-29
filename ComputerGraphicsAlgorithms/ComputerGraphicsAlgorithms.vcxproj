@@ -72,19 +72,19 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>C:\Users\eqxba\Desktop\АКГ\ComputerGraphicsAlgorithms\ComputerGraphicsAlgorithms\External dependencies\Include;$(IncludePath)</IncludePath>
+    <IncludePath>C:\Users\eqxba\Desktop\АКГ\CGA\ComputerGraphicsAlgorithms\External dependencies\Include;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>C:\Users\DAY\Desktop\АКГ\CGA\ComputerGraphicsAlgorithms\External dependencies\Include;$(IncludePath)</IncludePath>
+    <IncludePath>C:\Users\eqxba\Desktop\АКГ\CGA\ComputerGraphicsAlgorithms\External dependencies\Include;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>C:\Users\eqxba\Desktop\АКГ\ComputerGraphicsAlgorithms\ComputerGraphicsAlgorithms\External dependencies\Include;$(IncludePath)</IncludePath>
+    <IncludePath>C:\Users\eqxba\Desktop\АКГ\CGA\ComputerGraphicsAlgorithms\External dependencies\Include;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>C:\Users\DAY\Desktop\АКГ\CGA\ComputerGraphicsAlgorithms\External dependencies\Include;$(IncludePath)</IncludePath>
+    <IncludePath>C:\Users\eqxba\Desktop\АКГ\CGA\ComputerGraphicsAlgorithms\External dependencies\Include;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -108,7 +108,6 @@
       <PrecompiledHeader>
       </PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
-      <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>
       </PreprocessorDefinitions>
@@ -166,6 +165,9 @@
     <ClInclude Include="Buffer.h" />
     <ClInclude Include="Camera.h" />
     <ClInclude Include="Game.h" />
+    <ClInclude Include="LightSource.h" />
+    <ClInclude Include="lodepng.h" />
+    <ClInclude Include="lodepng_util.h" />
     <ClInclude Include="Math.h" />
     <ClInclude Include="main.h" />
     <ClInclude Include="framework.h" />
@@ -175,14 +177,20 @@
     <ClInclude Include="Resource.h" />
     <ClInclude Include="Scene.h" />
     <ClInclude Include="targetver.h" />
+    <ClInclude Include="tgaimage.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Camera.cpp" />
     <ClCompile Include="Game.cpp" />
+    <ClCompile Include="lodepng.cpp" />
+    <ClCompile Include="lodepng_fuzzer.cpp" />
+    <ClCompile Include="lodepng_util.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="ObjParser.cpp" />
+    <ClCompile Include="pngdetail.cpp" />
     <ClCompile Include="Renderer.cpp" />
     <ClCompile Include="Scene.cpp" />
+    <ClCompile Include="tgaimage.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="ComputerGraphicsAlgorithms.rc" />
@@ -190,6 +198,11 @@
   <ItemGroup>
     <Image Include="ComputerGraphicsAlgorithms.ico" />
     <Image Include="small.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="LICENSE" />
+    <None Include="Makefile" />
+    <None Include="README.md" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

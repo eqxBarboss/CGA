@@ -5,6 +5,7 @@
 #include <memory>
 #include <functional>
 #include <mutex>
+#include <vector>
 #include <algorithm>
 
 #include <ctpl/ctpl_stl.h>
@@ -36,6 +37,18 @@ private:
 	static std::condition_variable cv;
 	static int width, height;
 
+	static std::vector<unsigned char> diffuseMap;
+	static unsigned diffuseMapWidth, diffuseMapHeight;
+
+	static std::vector<unsigned char> specularMap;
+	static unsigned specularMapWidth, specularMapHeight;
+
+
+	static std::vector<unsigned char> normalMapLoaded;
+	static std::vector<glm::vec3> normalMap;
+	static std::vector<glm::vec3> normalMapTransformed;
+	static unsigned normalMapWidth, normalMapHeight;
+
 	ctpl::thread_pool threadPool;
 	int threadCount;
 
@@ -59,6 +72,11 @@ private:
 		, const glm::mat4& vm
 		, const glm::mat4 &viewPort);
 	static void CalculateNormals(int id
+		, Obj& renderTarget
+		, int first
+		, int last
+		, const glm::mat3& TIvm);
+	static void CalculateNormalsMap(int id
 		, Obj& renderTarget
 		, int first
 		, int last
@@ -123,11 +141,40 @@ private:
 		}
 	}
 
+	static COLORREF inline GetRgbFromMap(const std::vector<unsigned char>& map, float u, float v)
+	{
+		int i = std::min((int)(u * (diffuseMapWidth - 1)), (int)diffuseMapWidth - 1);
+		int j = std::min((int)((1 - v) * (diffuseMapHeight - 1)), (int)diffuseMapHeight - 1);
+		int textelIndex = (j * diffuseMapWidth + i) * 4;
+		return RGB(map[textelIndex + 0], map[textelIndex + 1], map[textelIndex + 1]);
+	}
+
+
+	static glm::vec3 inline GetSpecularFromMap(const std::vector<unsigned char>& map, float u, float v)
+	{
+		int i = std::min((int)(u * (diffuseMapWidth - 1)), (int)diffuseMapWidth - 1);
+		int j = std::min((int)((1 - v) * (diffuseMapHeight - 1)), (int)diffuseMapHeight - 1);
+		int textelIndex = (j * diffuseMapWidth + i) * 4;
+		return glm::vec3(map[textelIndex + 0] / 255.0f, map[textelIndex + 1] / 255.0f, map[textelIndex + 1] / 255.0f);
+	}
+
+	static const glm::vec3 inline &GetNormalFromMap(float u, float v)
+	{
+		int i = std::min((int)(u * (normalMapWidth - 1)), (int)normalMapWidth - 1);
+		int j = std::min((int)((1 - v) * (normalMapHeight - 1)), (int)normalMapHeight - 1);
+		int textelIndex = (j * normalMapWidth + i);
+		return normalMapTransformed[textelIndex];
+	}
+
 	static inline void RasterizeTriangle(Buffer& buffer, float* zBuffer, Obj& renderTarget, const std::vector<glm::vec4>& cameraSpaceVertices, const LightSource& lightSource, int polygonIndex)
 	{
 		const auto& vertices = renderTarget.vertices;
 		const auto& polygon = renderTarget.polygons[polygonIndex];
 		auto& normals = renderTarget.normals;
+
+		auto txc0 = renderTarget.textureCoords[polygon.textureIndices[0]];
+		auto txc1 = renderTarget.textureCoords[polygon.textureIndices[1]];
+		auto txc2 = renderTarget.textureCoords[polygon.textureIndices[2]];
 
 		const glm::vec4* a = &cameraSpaceVertices[polygon.verticesIndices[0]];
 		const glm::vec4* b = &cameraSpaceVertices[polygon.verticesIndices[1]];
@@ -174,6 +221,9 @@ private:
 				auto temp1 = a;
 				a = b;
 				b = temp1;
+				auto temp3 = txc0;
+				txc0 = txc1;
+				txc1 = temp3;
 			};
 			if (v0y > v2y)
 			{
@@ -186,6 +236,9 @@ private:
 				auto temp1 = a;
 				a = c;
 				c = temp1;
+				auto temp3 = txc0;
+				txc0 = txc2;
+				txc2 = temp3;
 			};
 			if (v1y > v2y)
 			{
@@ -198,6 +251,9 @@ private:
 				auto temp1 = b;
 				b = c;
 				c = temp1;
+				auto temp3 = txc1;
+				txc1 = txc2;
+				txc2 = temp3;
 			};
 		}
 
@@ -246,11 +302,37 @@ private:
 					zBuffer[yMulWidth + x] = z;
 
 					{					
-						glm::vec3 crs = glm::cross(glm::vec3(ACx, ABx, v0x - x), glm::vec3(ACy, ABy, PAy));
+						glm::vec3 crs = glm::cross(glm::vec3(ACx, ABx, v0x - x), glm::vec3(ACy, ABy, PAy));					
 						glm::vec3 barycentric(1.0f - (crs.x + crs.y) / crs.z, crs.y / crs.z, crs.x / crs.z);
+
+						//if (barycentric.y < 0 || barycentric.z < 0) continue;
+
 						glm::vec3 normal = glm::normalize(barycentric.x * *nA + barycentric.y * *nB + barycentric.z * *nC);
-						glm::vec4 v = barycentric.x * *a + barycentric.y * *b + barycentric.z * *c;
-						color = GetPhongColor(v, normal, lightSource);
+						glm::vec4 v = barycentric.x * *a + barycentric.y * *b + barycentric.z * *c;						
+
+						glm::vec3 barycentricCorrected = glm::vec3(barycentric.x / v0z, barycentric.y / v1z, barycentric.z / v2z);
+						float sum = barycentricCorrected.x + barycentricCorrected.y + barycentricCorrected.z;
+						barycentricCorrected.x /= sum;
+						barycentricCorrected.y /= sum;
+						barycentricCorrected.z /= sum;
+
+						glm::vec3 uv = barycentricCorrected.x * txc0 + barycentricCorrected.y * txc1 + barycentricCorrected.z * txc2;
+						COLORREF clr = GetRgbFromMap(diffuseMap, std::clamp(uv.x, 0.0f, 1.0f) , std::clamp(uv.y, 0.0f, 1.0f));
+						normal = GetNormalFromMap(std::clamp(uv.x, 0.0f, 1.0f), std::clamp(uv.y, 0.0f, 1.0f));
+						//clr = RGB(255, 255, 255);
+
+						{
+						//COLORREF c0 = GetRgbFromMap(diffuseMap, txc0.x, txc0.y);
+						//COLORREF c1 = GetRgbFromMap(diffuseMap, txc1.x, txc1.y);
+						//COLORREF c2 = GetRgbFromMap(diffuseMap, txc2.x, txc2.y);
+						//COLORREF avg = RGB(
+						//	(GetRValue(c0) + GetRValue(c1) + GetRValue(c2)) / 3.0f,
+						//	(GetGValue(c0) + GetGValue(c1) + GetGValue(c2)) / 3.0f,
+						//	(GetBValue(c0) + GetBValue(c1) + GetBValue(c2)) / 3.0f
+						//);
+						}
+
+						color = GetPhongColor(v, normal, lightSource, clr, GetSpecularFromMap(specularMap, std::clamp(uv.x, 0.0f, 1.0f), std::clamp(uv.y, 0.0f, 1.0f)));
 					}
 
 					buffer.SetPixel(x, y, color);
@@ -260,37 +342,37 @@ private:
 		}
 	}
 
-	static inline COLORREF GetPhongColor(const glm::vec4& v, const glm::vec3& normal, const LightSource& lightSource)
+	static inline COLORREF GetPhongColor(const glm::vec4& v, const glm::vec3& normal, const LightSource& lightSource, const COLORREF& color, glm::vec3 specular)
 	{
-		constexpr glm::vec3 A = glm::vec3(0.05375f, 0.05f, 0.06625f);
-		constexpr glm::vec3 D = glm::vec3(0.18275f, 0.17f, 0.22525f);
-		constexpr glm::vec3 S = glm::vec3(0.332741f, 0.328634f, 0.346435f);
-		constexpr float shininess = 0.3f;
+		float ambientStrength = 0.1;
 
-		int r, g, b;
-		
-		r = GetRValue(lightSource.color) * A.x;
-		g = GetGValue(lightSource.color) * A.y;
-		b = GetBValue(lightSource.color) * A.z;
+		float r, g, b;
+
+		// Ambient
+		r = lightSource.color.x * ambientStrength;
+		g = lightSource.color.y * ambientStrength;
+		b = lightSource.color.z * ambientStrength;
 
 		glm::vec3 lightDir = glm::normalize(lightSource.position - (glm::vec3)v);
-		const auto dot = std::max(glm::dot(lightDir, normal), 0.0f);
+		const auto diff = std::max(glm::dot(lightDir, normal), 0.0f);
 
-		r += GetRValue(lightSource.color) * (dot * D.x);
-		g += GetGValue(lightSource.color) * (dot * D.y);
-		b += GetBValue(lightSource.color) * (dot * D.z);
+		// Diffuse
+		r += lightSource.color.x * diff;
+		g += lightSource.color.y * diff;
+		b += lightSource.color.z * diff;
 
 		glm::vec3 viewDir = glm::normalize((glm::vec3)-v);
 		glm::vec3 reflectDir = glm::reflect(-lightDir, normal);
-		float spec = std::pow(std::max(glm::dot(viewDir, reflectDir), 0.0f), shininess * 128);
+		float spec = std::pow(std::max(glm::dot(viewDir, reflectDir), 0.0f), 128);
 
-		r += GetRValue(lightSource.color) * spec * S.x;
-		g += GetGValue(lightSource.color) * spec * S.y;
-		b += GetBValue(lightSource.color) * spec * S.z;
+		// Specular
+		r += lightSource.color.x * spec * specular.x;
+		g += lightSource.color.y * spec * specular.y;
+		b += lightSource.color.z * spec * specular.z;
 
-		r = std::min(r, 255);
-		g = std::min(g, 255);
-		b = std::min(b, 255);
+		r = std::min(r * GetRValue(color), 255.0f);
+		g = std::min(g * GetGValue(color), 255.0f);
+		b = std::min(b * GetBValue(color), 255.0f);
 
 		return RGB(b, g, r);
 	}

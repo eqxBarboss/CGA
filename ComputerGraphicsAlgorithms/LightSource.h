@@ -9,10 +9,10 @@ namespace cga
 class LightSource
 {
 public:
-	LightSource(glm::vec3 aPosition, COLORREF aColor) : position(aPosition), color(aColor) {}
+	LightSource(glm::vec3 aPosition, glm::vec3 aColor) : position(aPosition), color(aColor) {}
 
 	glm::vec3 position;
-	COLORREF color;
+	glm::vec3 color;
 };
 
 }
