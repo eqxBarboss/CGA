@@ -12,8 +12,6 @@ Game::Game(std::function<int()> aGetTickCountCallback, std::function<void()> aIn
 	renderer(aWidth, aHeight, aInvalidateCallback),
 	width(aWidth),
 	height(aHeight),
-	lastX((float)width / 2),
-	lastY((float)height / 2),
 	keyStates(1024, false)
 {
 	lastTick = getTickCountCallback();
@@ -73,23 +71,35 @@ void Game::DoMovement()
 		camera.ProcessKeyboard(RIGHT, deltaTime);
 		updated = true;
 	}
+	if (keyStates[0x10])
+	{
+		camera.MovementSpeed = 3 * cga::SPEED;
+	}
+	else
+	{
+		camera.MovementSpeed = cga::SPEED;
+	}
 }
 
 void Game::RotateCamera()
 {
-	if (firstMouse) return;
+	if (!mouseVisible)
+	{
+		POINT cursorPosition;
+		GetCursorPos(&cursorPosition);
+		double clientWidthCenter = width / 2.0;
+		double clientHeightCenter = height / 2.0;
+		SetCursorPos(clientWidthCenter, clientHeightCenter);
 
-	float xOffset = newX - lastX;
-	float yOffset = lastY - newY;
+		float xOffset = cursorPosition.x - clientWidthCenter;
+		float yOffset = cursorPosition.y - clientHeightCenter;
 
-	if (xOffset == 0 && yOffset == 0)
-		return;
+		if (xOffset == 0 && yOffset == 0)
+			return;
 
-	lastX = newX;
-	lastY = newY;
-
-	scene->camera.ProcessMouseMovement(xOffset, yOffset);
-	updated = true;
+		scene->camera.ProcessMouseMovement(xOffset, -yOffset);
+		updated = true;
+	}
 }
 
 void Game::OnKeyDown(unsigned int virtualKeyCode)
@@ -100,21 +110,16 @@ void Game::OnKeyDown(unsigned int virtualKeyCode)
 void Game::OnKeyUp(unsigned int virtualKeyCode)
 {
 	keyStates[virtualKeyCode] = false;
+	if (virtualKeyCode == VK_CONTROL || virtualKeyCode == VK_CONTROL)
+	{
+		ToggleMouse();
+	}
 }
 
-void Game::OnMouseMove(int aNewX, int aNewY)
+void Game::ToggleMouse()
 {
-	if (scene == nullptr) return;
-
-	if (firstMouse)
-	{
-		lastX = aNewX;
-		lastY = aNewY;
-		firstMouse = false;
-	}
-
-	newX = aNewX;
-	newY = aNewY;
+	mouseVisible = !mouseVisible;
+	ShowCursor(mouseVisible);
 }
 
 void Game::OnWheelScroll(int delta)
@@ -138,6 +143,14 @@ void Game::LoadScene(std::string pathToObject)
 		firstMouse = true;
 		updated = true;
 	}
+	int i = pathToObject.size();
+    for (; i >= 0; i--) {
+		if (pathToObject[i] == '\\')
+		{
+			break;
+		}
+	}
+	renderer.SetMaps(pathToObject.substr(0, i));
 }
 
 }

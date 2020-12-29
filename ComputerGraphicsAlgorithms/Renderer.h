@@ -30,6 +30,7 @@ public:
 	Buffer& GetCurrentBuffer();
 
 	void Render(std::unique_ptr<Scene> &scene);
+    void SetMaps(std::string path);
 
 private:
 	static int workingThreads;
@@ -58,6 +59,8 @@ private:
 	Buffer buffer, backBuffer;
 	float* zBuffer;
 	float* zBufferInitial;
+
+	std::string scenePath;
 
 	std::function<void()> aInvalidateCallback;
 

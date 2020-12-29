@@ -200,13 +200,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	case WM_KEYUP:
 		game->OnKeyUp(wParam);
 		break;
-	case WM_MOUSEMOVE:
-		{
-			auto xPos = GET_X_LPARAM(lParam);
-			auto yPos = GET_Y_LPARAM(lParam);
-			game->OnMouseMove(xPos, yPos);
-		}
-		break;
     case WM_MOUSEWHEEL:
         {
             auto zDelta = GET_WHEEL_DELTA_WPARAM(wParam) / WHEEL_DELTA;

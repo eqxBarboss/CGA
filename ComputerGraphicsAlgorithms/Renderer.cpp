@@ -39,19 +39,6 @@ Renderer::Renderer(int aWidth, int aHeight, std::function<void()> aInvalidateCal
 	zBuffer = new float[width * height];
 	zBufferInitial = new float[width * height];
 
-	lodepng::decode(diffuseMap, diffuseMapWidth, diffuseMapHeight, "C:\\Users\\eqxba\\Desktop\\АКГ\\Материалы\\Head\\Albedo Map.png");
-	lodepng::decode(specularMap, specularMapWidth, specularMapHeight, "C:\\Users\\eqxba\\Desktop\\АКГ\\Материалы\\Head\\Specular Map.png");
-	lodepng::decode(normalMapLoaded, normalMapWidth, normalMapHeight, "C:\\Users\\eqxba\\Desktop\\АКГ\\Материалы\\Head\\Normal Map.png");
-
-	for (int i = 0; i < normalMapLoaded.size(); i += 4) 
-		normalMap.push_back(glm::vec3(
-		  normalMapLoaded[i] / 255.0f * 2 - 1
-		, normalMapLoaded[i + 1] / 255.0f * 2 - 1
-		, normalMapLoaded[i + 2] / 255.0f * 2 - 1
-	));
-
-	for (int i = 0; i < normalMap.size(); i++) normalMapTransformed.push_back(normalMap[i]);
-
 	for (int i = 0; i < width * height; i++) zBufferInitial[i] = (float)1;
 }
 
@@ -106,7 +93,7 @@ void Renderer::Render(std::unique_ptr<Scene> &scene)
 		}
 
 		// Some stuff until waiting
-		backBuffer.ClearWithColor(RGB(0, 0, 0));
+		backBuffer.ClearWithColor(RGB(50, 200, 50));
 		ClearZBuffer();
 
 		WaitForThreads();
@@ -178,6 +165,25 @@ void Renderer::Render(std::unique_ptr<Scene> &scene)
 	std::swap(buffer.data, backBuffer.data);
 
 	aInvalidateCallback();
+}
+
+void Renderer::SetMaps(std::string path) {
+	normalMap.clear();
+	normalMapLoaded.clear();
+	diffuseMap.clear();
+    specularMap.clear();
+	lodepng::decode(diffuseMap, diffuseMapWidth, diffuseMapHeight, path + "\\Albedo Map.png");
+	lodepng::decode(specularMap, specularMapWidth, specularMapHeight, path + "\\Specular Map.png");
+	lodepng::decode(normalMapLoaded, normalMapWidth, normalMapHeight, path + "\\Normal Map.png");
+
+	for (int i = 0; i < normalMapLoaded.size(); i += 4) 
+		normalMap.push_back(glm::vec3(
+		  normalMapLoaded[i] / 255.0f * 2 - 1
+		, normalMapLoaded[i + 1] / 255.0f * 2 - 1
+		, normalMapLoaded[i + 2] / 255.0f * 2 - 1
+	));
+
+	for (int i = 0; i < normalMap.size(); i++) normalMapTransformed.push_back(normalMap[i]);
 }
 
 void Renderer::CalculateVertices(int id

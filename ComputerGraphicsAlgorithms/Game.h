@@ -22,7 +22,7 @@ public:
 	// event processors
 	void OnKeyDown(unsigned int virtualKeyCode);
 	void OnKeyUp(unsigned int virtualKeyCode);
-	void OnMouseMove(int newX, int newY);
+	void ToggleMouse();
 	void OnWheelScroll(int delta);
 
 	Buffer& GetCurrentBuffer();
@@ -41,9 +41,8 @@ private:
 	std::vector<bool> keyStates;
 
 	int width, height;
-	int lastX, lastY;
-	int newX, newY;
 	bool firstMouse = true;
+	bool mouseVisible = true;
 
 	// callbacks
 	std::function<int()> getTickCountCallback;

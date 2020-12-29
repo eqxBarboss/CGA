@@ -13,7 +13,7 @@ namespace cga
 const float YAW = -90.0f;
 const float PITCH = 0.0f;
 const float SPEED = 0.001f;
-const float SENSITIVTY = 0.5f;
+const float SENSITIVTY = 0.25f;
 const float DEFAULT_FOV = 45.0f;
 const float MAX_FOV = 89.0f;
 
